@@ -1,0 +1,487 @@
+%%
+/*
+Date Written: February 11, 2013
+
+Name: bu0236_112012.sd
+
+Copyright (c) 2013, SCIPS.com Inc.
+
+Modify
+Date                   By                  Comment
+--------------------------------------------------------------
+02/11/2013             JLB              new form created
+===========================
+*/
+
+Program
+Name = "bu0236_112012";
+Type = "File";
+Domain = "SFPPRINT1";
+Padcharacter = Space;
+
+ String L_FILE_NAME[16] = "bu0236_112012.cq";
+ String L_COPY_NAME[20] ;
+ String L_SFPLOCATION_ZIP;
+ String L_BOPENDORSE_ZIP;
+ Unsigned ascii number l_max_lines;
+ unsigned ascii number l_bopaddin_sub_code[4] ;
+ Unsigned Ascii Number L_YEAR[4];
+ Unsigned Ascii number L_LINE_OF_BUSINESS[4];
+ Unsigned ascii number l_found[1];
+ Unsigned Ascii Number L_ITEM_COUNTER;
+ Unsigned Ascii Number L_STATE[2]=0;
+ Unsigned Ascii Number L_LOOP;
+ wdate L_EFF_DATE;
+ Unsigned Ascii Number L_LINE_COUNTER;
+ Unsigned Ascii Number L_PAGE_NUMBER;
+ String L_bopaddin_ZIP[10];
+ String L_bopaddin_ZIP2[10];
+ string l_enter ;
+
+ Include "swsut100.var"
+ Include "swsut200.var"
+ Include "swsut300.var"
+ Include "csfonts.inc"
+
+Initialization
+  Deletefile (L_FILE_NAME);
+
+Update
+
+Access SFPNAME,
+   Set SFPNAME:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPNAME:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPNAME:END_SEQUENCE = SFPPRINT1:END_SEQUENCE , Generic
+
+Access SFPLOCATION,
+   Set SFPLOCATION:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPLOCATION:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPLOCATION:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access sfpend_alias,
+   Set sfpend_alias:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       sfpend_alias:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       sfpend_alias:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access bopendorse,
+   Set bopendorse:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       bopendorse:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       bopendorse:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access bopgeneral,
+   Set bopgeneral:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       bopgeneral:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       bopgeneral:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Include "swsut100.inc"
+I_CODE = "BU0236"
+Include "swsut200.inc"
+
+While sfpend_alias:POLICY_NO    = SFPPRINT1:POLICY_NO And
+      sfpend_alias:POL_YEAR     = SFPPRINT1:POL_YEAR And
+      sfpend_alias:END_SEQUENCE = SFPPRINT1:END_SEQUENCE
+{
+  If sfpend_alias:CODE = I_CODE Then
+    {
+      L_STATE            = BOPGENERAL:STATE
+      L_COMPANY_ID       = sfpname:COMPANY_ID
+      L_LINE_OF_BUSINESS = sfpname:LINE_OF_BUSINESS
+
+      Access SFSOPTEND,
+         Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+             SFSOPTEND:STATE            = L_STATE,
+             SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+             SFSOPTEND:CODE             = I_CODE, generic
+
+       While SFSOPTEND:COMPANY_ID       = L_COMPANY_ID and
+             SFSOPTEND:STATE            = L_STATE and
+             SFSOPTEND:LINE_OF_BUSINESS = l_LINE_OF_BUSINESS and
+             SFSOPTEND:CODE             = I_CODE
+
+       {  --start of sfsoptend check
+         If (sfpname:eff_date >= sfsoptend:eff_date and
+            (sfpname:eff_date < sfsoptend:exp_date or
+             sfsoptend:exp_date = 0)) then
+           {
+             l_eff_date = sfsoptend:eff_date
+           }
+         next sfsoptend
+       }
+
+      Access SFSOPTEND,
+         Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+             SFSOPTEND:STATE            = L_STATE,
+             SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+             SFSOPTEND:CODE             = I_CODE,
+             SFSOPTEND:EFF_DATE         = L_EFF_DATE, exact
+
+      Access BOPENDORSE,
+         Set BOPENDORSE:POLICY_NO    = SFPPRINT1:POLICY_NO,
+             BOPENDORSE:POL_YEAR     = SFPPRINT1:POL_YEAR,
+             BOPENDORSE:END_SEQUENCE = SFPPRINT1:END_SEQUENCE,
+             BOPENDORSE:PREM_NO      = sfpend_alias:PREM_NO,
+             BOPENDORSE:BUILD_NO     = sfpend_alias:BUILD_NO,
+             BOPENDORSE:CODE         = I_CODE, Generic
+
+     Access bopaddin, Set bopaddin:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+                          bopaddin:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+                          bopaddin:END_SEQUENCE = SFPPRINT1:END_SEQUENCE,
+                          bopaddin:prem_no      = sfpend_alias:prem_no,
+                          bopaddin:build_no     = sfpend_alias:build_no, Generic
+
+     while bopaddin:POLICY_NO    = SFPPRINT1:POLICY_NO  and
+           bopaddin:POL_YEAR     = SFPPRINT1:POL_YEAR and
+           bopaddin:END_SEQUENCE = SFPPRINT1:END_SEQUENCE and
+           bopaddin:prem_no      = sfpend_alias:prem_no and
+           bopaddin:build_no     = sfpend_alias:build_no
+        begin
+        if bopaddin:code = i_code then
+            l_bopaddin_sub_code = bopaddin:sub_code
+
+        next bopaddin
+        end
+
+     Access bopaddin, Set bopaddin:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+                          bopaddin:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+                          bopaddin:END_SEQUENCE = SFPPRINT1:END_SEQUENCE,
+                          bopaddin:prem_no      = sfpend_alias:prem_no,
+                          bopaddin:build_no     = sfpend_alias:build_no,
+                          bopaddin:sub_code     = l_bopaddin_sub_code, Generic
+
+      Access SFPLOCATION,
+         Set SFPLOCATION:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+             SFPLOCATION:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+             SFPLOCATION:END_SEQUENCE = SFPPRINT1:END_SEQUENCE,
+             SFPLOCATION:PREM_NO      = sfpend_alias:PREM_NO,
+             SFPLOCATION:BUILD_NO     = sfpend_alias:BUILD_NO, Generic
+
+      L_SFPLOCATION_ZIP = If (Val(SFPLOCATION:STR_ZIPCODE[6,9]) = 0) Then
+                             SFPLOCATION:STR_ZIPCODE[1,5]
+                          Else
+                             SFPLOCATION:STR_ZIPCODE[1,5] + "-" +
+                             SFPLOCATION:STR_ZIPCODE[6,9]
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a420h7200V")
+      Writefile(L_FILE_NAME,"%s",l_copyright_6)
+      Writefile(L_FILE_NAME,"%s"," ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s",sfsoptend:COPYRIGHT)
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_12)
+      Writefile(L_FILE_NAME,"%s","<033>&a4300h120V")
+      Writefile(L_FILE_NAME,"%s",Trun(SFSOPTEND:FORM_PRINT))
+      Writefile(L_FILE_NAME,"%s"," ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s",SFSOPTEND:EDITION_PRINT)
+
+      L_bopaddin_ZIP = If (Val(bopaddin:STR_ZIPCODE[6,9]) = 0) Then
+                              bopaddin:STR_ZIPCODE[1,5]
+                           Else
+                            bopaddin:STR_ZIPCODE[1,5] + "-" +
+                            bopaddin:STR_ZIPCODE[6,9]
+
+      L_bopaddin_ZIP2 = If (Val(bopaddin:STR_ZIPCODE[2,6]) = 0) Then
+                            bopaddin:STR_ZIPCODE[1,2]
+                          Else
+                            bopaddin:STR_ZIPCODE[1,2] + "-" +
+                            bopaddin:STR_ZIPCODE[3,6]
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+      Writefile(L_FILE_NAME,"%s","LOSS PAYEE ")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+      Writefile(L_FILE_NAME,"%s","<033>*c75h8v0P")
+      Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s"," LENDERS LOSS PAYABLE ")
+      Writefile(L_FILE_NAME,"%s","<033>&a+0h+20V")
+      Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+      Writefile(L_FILE_NAME,"%s","<033>&a+50h-20V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s"," PART I")
+      L_LINE_COUNTER =L_LINE_COUNTER +1
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+      Writefile(L_FILE_NAME,"%s","This endorsement establishes methods of payments to others who have an insurable interest in property covered by this policy.  The required")
+      L_LINE_COUNTER =L_LINE_COUNTER +1
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+      Writefile(L_FILE_NAME,"%s","information may be shown below or elsewhere in this policy.")
+      L_LINE_COUNTER =L_LINE_COUNTER +1
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+130V")
+      Writefile(L_FILE_NAME,"%s","The provisions of this endorsement apply only when the endorsement number is listed in the Declarations.")
+      L_LINE_COUNTER =L_LINE_COUNTER +1.26
+
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+      Writefile(L_FILE_NAME,"%s","Except as provided below, all other provisions in this policy are unchanged.")
+      L_LINE_COUNTER =L_LINE_COUNTER +1
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+30V<033>*c5800h8v0P")--Horizontal line
+      L_LINE_COUNTER =L_LINE_COUNTER +0.2
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+200V")
+      Writefile(L_FILE_NAME,"%s","Policy # ")
+      Writefile(L_FILE_NAME,"%n",bopaddin:POLICY_NO)
+      L_LINE_COUNTER =L_LINE_COUNTER +1
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+300V")
+      Writefile(L_FILE_NAME,"%s","SCHEDULE")
+      L_LINE_COUNTER =L_LINE_COUNTER +2.5
+
+      Writefile(L_FILE_NAME,"%s",L_PUSH)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+      Writefile(L_FILE_NAME,"%s","Designated Person or Organization:")
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+      Writefile(L_FILE_NAME,"%s","(Loss Payee Name / Address)")
+      L_LINE_COUNTER =L_LINE_COUNTER +1
+      For L_LOOP = 1 to 3
+        {
+          If bopaddin:name[L_LOOP] <> "" Then
+            {
+              Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+              Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+              Writefile(L_FILE_NAME,"%s",bopaddin:name[L_LOOP])
+            }
+        }
+      For L_LOOP = 1 to 3
+        {
+          If bopaddin:ADDRESS[L_LOOP] <> "" Then
+            {
+              Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+              Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+              Writefile(L_FILE_NAME,"%s",bopaddin:ADDRESS[L_LOOP])
+            }
+        }
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+      Writefile(L_FILE_NAME,"%s",Trun(bopaddin:CITY))
+      Writefile(L_FILE_NAME,"%s",", ")
+      Writefile(L_FILE_NAME,"%s",bopaddin:STR_STATE)
+      Writefile(L_FILE_NAME,"%s"," ")
+      Writefile(L_FILE_NAME,"%s",L_bopaddin_ZIP)
+
+      Writefile(L_FILE_NAME,"%s",L_POP)
+      Writefile(L_FILE_NAME,"%s","<033>&a2800h+120V")
+      Writefile(L_FILE_NAME,"%s","Description / Location of Covered Property:")
+      Writefile(L_FILE_NAME,"%s","<033>&a2800h+120V")
+      Writefile(L_FILE_NAME,"%s",bopaddin:description)
+      Writefile(L_FILE_NAME,"%s","<033>&a2800h+120V")
+      Writefile(L_FILE_NAME,"%s","Location ")
+      Writefile(L_FILE_NAME,"%n",sfplocation:PREM_NO)
+      Writefile(L_FILE_NAME,"%s","<033>&a2800h+120V")
+      Writefile(L_FILE_NAME,"%s","Building ")
+      Writefile(L_FILE_NAME,"%n",sfplocation:BUILD_NO)
+      Writefile(L_FILE_NAME,"%s","<033>&a2800h+120V")
+      Writefile(L_FILE_NAME,"%s",sfplocation:address)
+      For L_LOOP = 1 to 3
+        {
+          If SFPLOCATION:ADDRESS1[L_LOOP] <> "" Then
+            {
+              Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+              Writefile(L_FILE_NAME,"%s","<033>&a2800h+120V")
+              Writefile(L_FILE_NAME,"%s",SFPLOCATION:ADDRESS1[L_LOOP])
+            }
+        }
+      Writefile(L_FILE_NAME,"%s","<033>&a2800h+120V")
+      Writefile(L_FILE_NAME,"%s",Trun(sfplocation:CITY))
+      Writefile(L_FILE_NAME,"%s",", ")
+      Writefile(L_FILE_NAME,"%s",sfplocation:STR_STATE)
+      Writefile(L_FILE_NAME,"%s"," ")
+      Writefile(L_FILE_NAME,"%s",L_sfplocation_ZIP)
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h2850V")
+      Writefile(L_FILE_NAME,"%s","COVERAGE MODIFICATIONS")
+      L_LINE_COUNTER =L_LINE_COUNTER +14
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+      Writefile(L_FILE_NAME,"%s","A.")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a290h+0V")
+      Writefile(L_FILE_NAME,"%s","The Loss Payee shown in the Schedule of this endorsement is a creditor (including a mortgage holder or trustee) ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+      Writefile(L_FILE_NAME,"%s","you ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","have entered into")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a290h+120V")
+      Writefile(L_FILE_NAME,"%s","a contract with for the sale of covered property.  The interest in that covered property is established by such written contracts as: bills")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a290h+120V")
+      Writefile(L_FILE_NAME,"%s","of lading; contract for deed; financing statements, or warehouse receipts.")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+150V")
+      Writefile(L_FILE_NAME,"%s","B.")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a290h+0V")
+      Writefile(L_FILE_NAME,"%s","With regard to covered property in which ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+      Writefile(L_FILE_NAME,"%s","you ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","and the Loss Payee have an insurable interest ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+      Writefile(L_FILE_NAME,"%s","we ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","pay any claim for loss to each Loss")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a290h+120V")
+      Writefile(L_FILE_NAME,"%s","Payee in their order of precedence, as interests may appear.  The Loss Payee has the right to receive loss payment even if the Loss")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a290h+120V")
+      Writefile(L_FILE_NAME,"%s","Payee has started foreclosure or similar action on the covered property.")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+150V")
+      Writefile(L_FILE_NAME,"%s","C.")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a290h+0V")
+      Writefile(L_FILE_NAME,"%s","If ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+      Writefile(L_FILE_NAME,"%s","we ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","deny ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+      Writefile(L_FILE_NAME,"%s","your ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","claim because of ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+      Writefile(L_FILE_NAME,"%s","your ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","acts or because ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+      Writefile(L_FILE_NAME,"%s","you ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","failed to comply with any applicable condition in this policy, the Loss Payee")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a290h+120V")
+      Writefile(L_FILE_NAME,"%s","retains the right to receive loss payment if the Loss Payee does all of the following:")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a290h+120V")
+      Writefile(L_FILE_NAME,"%s","1.")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a490h+0V")
+      Writefile(L_FILE_NAME,"%s","Pays any premium due at ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+      Writefile(L_FILE_NAME,"%s","our ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","request, if ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+      Writefile(L_FILE_NAME,"%s","you ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","fail to do so.")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a290h+150V")
+      Writefile(L_FILE_NAME,"%s","2.")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a490h+0V")
+      Writefile(L_FILE_NAME,"%s","Submits a signed, sworn proof of loss within 60 days after receiving notice from ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+      Writefile(L_FILE_NAME,"%s","us ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","of ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+      Writefile(L_FILE_NAME,"%s","your ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","failure to do so.")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a290h+150V")
+      Writefile(L_FILE_NAME,"%s","3.")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a490h+0V")
+      Writefile(L_FILE_NAME,"%s","Has notified ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+      Writefile(L_FILE_NAME,"%s","us ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","of any change in ownership, occupancy, or substantial change in risk known to the Loss Payee.")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a290h+150V")
+      Writefile(L_FILE_NAME,"%s","All the provisions in this policy then apply to the Loss Payee")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+150V")
+      Writefile(L_FILE_NAME,"%s","D.")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a290h+0V")
+      Writefile(L_FILE_NAME,"%s","If ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+      Writefile(L_FILE_NAME,"%s","we ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","pay the Loss Payee for any loss and deny payment to ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+      Writefile(L_FILE_NAME,"%s","you ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","because of ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+      Writefile(L_FILE_NAME,"%s","your ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","acts or because ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+      Writefile(L_FILE_NAME,"%s","you ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","have failed to comply with any")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a290h+120V")
+      Writefile(L_FILE_NAME,"%s","applicable condition in this policy, the following apply:")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a290h+120V")
+      Writefile(L_FILE_NAME,"%s","1.")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a490h+0V")
+      Writefile(L_FILE_NAME,"%s","The Loss Payee's rights will be transferred to ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+      Writefile(L_FILE_NAME,"%s","us ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","to the extent of the amount ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+      Writefile(L_FILE_NAME,"%s","we ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","pay.")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a290h+150V")
+      Writefile(L_FILE_NAME,"%s","2.")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a490h+0V")
+      Writefile(L_FILE_NAME,"%s","The Loss Payee's right to recover the full amount of the Loss Payee's claim is not impaired.")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a290h+150V")
+      Writefile(L_FILE_NAME,"%s","3.")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a490h+0V")
+      Writefile(L_FILE_NAME,"%s","At ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+      Writefile(L_FILE_NAME,"%s","our ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","option, ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+      Writefile(L_FILE_NAME,"%s","we ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","may pay the Loss Payee the whole principal on the debt plus any accrued interest and receive all of the Loss")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a490h+120V")
+      Writefile(L_FILE_NAME,"%s","Payee's rights to payment of the debt. ")
+      Writefile(L_FILE_NAME,"%s","<FF>")
+      L_LINE_COUNTER =L_LINE_COUNTER +1
+    }--End If sfpend_alias
+  Next sfpend_alias
+}
+Screen Exit
+Writefile(L_FILE_NAME,"%s%s",L_FORMFEED ,L_RESET )
+Closefile(L_FILE_NAME)
+End

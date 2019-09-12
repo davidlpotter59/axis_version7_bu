@@ -1,0 +1,557 @@
+%%
+/*
+Date Written: June 4, 2009
+
+Name: bu0820_122007.sd
+
+Copyright (c) 2000, SCIPS.com Inc.
+
+Modify
+Date                   By                  Comment
+--------------------------------------------------------------
+06/04/2009            JLB             New form bu0820
+===========================
+*/
+
+Program
+  Name = "bu0820_122007";
+  Type = "File";
+  Domain = "SFPPRINT1";
+  Padcharacter = Space;
+
+ String L_FILE_NAME[16] = "bu0820_122007.cq";
+ String l_company_id;
+ String L_COPY_NAME[20] ,
+        L_FORM;
+ Unsigned ascii number l_max_lines=60;
+ Unsigned Ascii Number L_YEAR[4];
+ Unsigned Ascii number L_LINE_OF_BUSINESS[4];
+ Unsigned ascii number l_found[1];
+ Unsigned Ascii Number L_ITEM_COUNTER;
+ Unsigned Ascii Number L_STATE[2]=0;
+ Unsigned Ascii Number L_LOOP;
+ wdate L_EFF_DATE;
+ Unsigned Ascii Number L_LINE_COUNTER;
+ Unsigned Ascii Number L_PAGE_NUMBER;
+ Unsigned ascii number L_PAGE_COUNTER;
+
+   Include "csfonts.inc"
+   Include "swsut100.var"
+   Include "swsut200.var"
+ --Include "swsut300.var"
+
+Initialization
+  Deletefile (L_FILE_NAME);
+
+Update
+
+Access SFPNAME,
+   Set SFPNAME:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPNAME:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPNAME:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access bopgeneral,
+   Set bopgeneral:POLICY_NO     = SFPPRINT1:POLICY_NO,
+       bopgeneral:POL_YEAR      = SFPPRINT1:POL_YEAR,
+       bopgeneral:END_SEQUENCE  = SFPPRINT1:END_SEQUENCE, Generic
+
+Access bopendorse,
+   Set bopendorse:POLICY_NO     = SFPPRINT1:POLICY_NO,
+       bopendorse:POL_YEAR      = SFPPRINT1:POL_YEAR,
+       bopendorse:END_SEQUENCE  = SFPPRINT1:END_SEQUENCE, Generic
+
+Access sfpend_alias,
+   Set sfpend_alias:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       sfpend_alias:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       sfpend_alias:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+   Include "swsut100.inc"
+   I_CODE = "BU0820"
+   Include "swsut200.inc"
+
+l_page_counter = 1
+/*
+While bopendorse:POLICY_NO    = SFPPRINT1:POLICY_NO And
+      bopendorse:POL_YEAR     = SFPPRINT1:POL_YEAR And
+      bopendorse:END_SEQUENCE = SFPPRINT1:END_SEQUENCE
+  {
+    If bopendorse:CODE = I_CODE Then
+      {*/
+        l_state            = bopgeneral:state
+        L_COMPANY_ID       = sfpname:COMPANY_ID
+        L_LINE_OF_BUSINESS = sfpname:LINE_OF_BUSINESS
+
+        Access SFSEND,
+           Set SFSEND:COMPANY_ID       = L_COMPANY_ID,
+               SFSEND:STATE            = L_STATE,
+               SFSEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS, generic
+
+         While SFSEND:COMPANY_ID       = L_COMPANY_ID and
+               SFSEND:STATE            = L_STATE and
+               SFSEND:LINE_OF_BUSINESS = l_LINE_OF_BUSINESS
+
+           {  --start of SFSEND check
+             If (sfpname:eff_date >= SFSEND:eff_date and
+                (sfpname:eff_date < SFSEND:exp_date or
+                 SFSEND:exp_date = 0)) then
+               {
+                 l_eff_date = SFSEND:eff_date
+               }
+             next SFSEND
+           }
+
+        Access SFSEND,
+           Set SFSEND:COMPANY_ID       = L_COMPANY_ID,
+               SFSEND:STATE            = L_STATE,
+               SFSEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+               SFSEND:FORM             = L_FORM,
+               SFSEND:CODE             = I_CODE,
+               SFSEND:EFF_DATE         = L_EFF_DATE, exact
+
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_12)
+        Writefile(L_FILE_NAME,"%s","<033>&a4580h120V")
+        Writefile(L_FILE_NAME,"%s","BU 08 20")
+        Writefile(L_FILE_NAME,"%s"," ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","12 07")
+        Writefile(L_FILE_NAME,"%s","<033>&a100h+120V")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a100h+120V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","MANDATORY ENDORSEMENT")
+        Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+        Writefile(L_FILE_NAME,"%s","<033>*c105h8v0P")
+        Writefile(L_FILE_NAME,"%s","<033>&a+135h+30V")
+        Writefile(L_FILE_NAME,"%s","NEW JERSEY")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a100h+130V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","This endorsement establishes Cancellation / Termination conditions in conformance with New Jersey Laws with regard to our rights as")
+        Writefile(L_FILE_NAME,"%s","<033>&a100h+120V")
+        Writefile(L_FILE_NAME,"%s","to such as provided under N.J.A.C.11:1-20 et al., adds a failure to disclose any lead-based paint and any lead-based paint hazard")
+        Writefile(L_FILE_NAME,"%s","<033>&a100h+120V")
+        Writefile(L_FILE_NAME,"%s","exclusion, and also modifies other policy provisions of this policy.")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a100h+130V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","Except as provided below, all other provisions in this policy are unchanged.")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a100h+40V")
+        Writefile(L_FILE_NAME,"%s","<033>*c5400h8v0p") --Horizontal line
+
+----column 1 ----
+        Writefile(L_FILE_NAME,"%s",L_push)
+        Writefile(L_FILE_NAME,"%s","<033>&a100h+240V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","ADDITIONAL CONDITIONS")
+        Writefile(L_FILE_NAME,"%s","<033>&a100h+120V")
+        Writefile(L_FILE_NAME,"%s","The COMMON CONDITION")
+        Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+        Writefile(L_FILE_NAME,"%s","<033>*c50h8v0P")
+        Writefile(L_FILE_NAME,"%s","<033>&a+75h+30V")
+        Writefile(L_FILE_NAME,"%s","CANCELLATION /")
+        Writefile(L_FILE_NAME,"%s","<033>&a100h+120V")
+        Writefile(L_FILE_NAME,"%s","TERMINATION is supplemented as follows:")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a100h+120V")
+        Writefile(L_FILE_NAME,"%s","B.")
+        Writefile(L_FILE_NAME,"%s","<033>&a300h+0V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","Our ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","Right to Cancel / Terminate")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a300h+120V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","1.")
+        Writefile(L_FILE_NAME,"%s","<033>&a500h+0V")
+        Writefile(L_FILE_NAME,"%s","Cancellation / Termination for Nonpayment of")
+        Writefile(L_FILE_NAME,"%s","<033>&a500h+120V")
+        Writefile(L_FILE_NAME,"%s","Premium")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a500h+120V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","a.")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+0V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","If the ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","first named insured ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","fails to pay, when due, any")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s","premium or installment for this policy, it may be")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s","cancelled by us by mailing or delivering notice of")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s","cancellation to the ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","first named insured ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","not less than")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s","10 days prior to the effective date of cancellation.")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a500h+150V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","b.")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+0V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","This policy terminates automatically on the")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s","expiration date of the expiring policy term if the ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","first")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s","named insured ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","does not pay when due any renewal")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s","premium, or installment payment, for this policy.")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s","Notice of the amount of renewal premium must be")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s","mailed or delivered by ")
+        Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+        Writefile(L_FILE_NAME,"%s","us ")
+        Writefile(L_FILE_NAME,"%s",l_arial_9)
+        Writefile(L_FILE_NAME,"%s","to the ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","first named insured")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","not less than 30 days but not more than 120 days")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s","prior to the premium due date.")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a300h+150V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","2.")
+        Writefile(L_FILE_NAME,"%s","<033>&a500h+0V")
+        Writefile(L_FILE_NAME,"%s","Cancellation / Termination for Causes Other Than")
+        Writefile(L_FILE_NAME,"%s","<033>&a500h+120V")
+        Writefile(L_FILE_NAME,"%s","Nonpayment of Premium")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a500h+120V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","a.")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+0V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","We ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","may cancel or nonrenew for reasons other than")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s","nonpayment of premium by mailing notice to the ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","first ")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s","named insured ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","not less than 30 days (except for")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s","reasons of moral hazard which require only 10 days'")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s","notice) but not more than 120 days prior to the")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s","effective date of cancellation or termination.")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a500h+150V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","b.")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+0V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","This policy cannot be cancelled or terminated for any")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s","underwriting reason or guideline that is arbitrary,")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s","capricious or unfairly discriminatory or without")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s","adequate prior notice to the ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","first named insured.  ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","The  ")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s","underwriting reasons or guidelines that we can use to")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s","cancel or terminate this policy are maintained on file")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s","by ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","us.  We ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","will furnish such to ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","you / your ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","lawful")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s","representative upon written request.")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a500h+150V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","c.")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+0V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","This provision does not apply to any policy that has")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s","been in effect for less than 60 days at the time notice")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s","of cancellation is mailed or delivered, unless the")
+        Writefile(L_FILE_NAME,"%s","<033>&a700h+120V")
+        Writefile(L_FILE_NAME,"%s","policy is a renewal policy.")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a300h+150V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","3.")
+        Writefile(L_FILE_NAME,"%s","<033>&a500h+0V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","We ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","mail or deliver ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","our ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","notice of cancellation or")
+        Writefile(L_FILE_NAME,"%s","<033>&a500h+120V")
+        Writefile(L_FILE_NAME,"%s","termination to the ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","first named insured's ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","last mailing")
+        Writefile(L_FILE_NAME,"%s","<033>&a500h+120V")
+        Writefile(L_FILE_NAME,"%s","address known to us.  ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","We ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","also agree to mail or deliver the")
+        Writefile(L_FILE_NAME,"%s","<033>&a500h+120V")
+        Writefile(L_FILE_NAME,"%s","notice of cancellation to the mortgagee named in this")
+        Writefile(L_FILE_NAME,"%s","<033>&a500h+120V")
+        Writefile(L_FILE_NAME,"%s","policy and to any other person entitled to such notice")
+        Writefile(L_FILE_NAME,"%s","<033>&a500h+120V")
+        Writefile(L_FILE_NAME,"%s","under this policy.")
+
+---column 2 ---
+        Writefile(L_FILE_NAME,"%s",L_pop)
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+240V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","COVERAGE MODIFICATIONS")
+        Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+        Writefile(L_FILE_NAME,"%s","<033>*c50h8v0P")
+        Writefile(L_FILE_NAME,"%s","<033>&a+75h+30V")
+        Writefile(L_FILE_NAME,"%s","PROPERTY  ")
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+120V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","If Part I is included in this policy, the following provisions applies:")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+150V")
+        Writefile(L_FILE_NAME,"%s","The COMMON CONDITION")
+        Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+        Writefile(L_FILE_NAME,"%s","<033>*c50h8v0P")
+        Writefile(L_FILE_NAME,"%s","<033>&a+75h+30V")
+        Writefile(L_FILE_NAME,"%s","ACTION OR SUIT AGAINST")
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+120V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","US ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","is supplemented as follows:")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+150V")
+        Writefile(L_FILE_NAME,"%s","No action may be brought against ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","us ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","until all conditions in this")
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+120V")
+        Writefile(L_FILE_NAME,"%s","policy are complied with, and unless brought within 12 months")
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+120V")
+        Writefile(L_FILE_NAME,"%s","after ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","our ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","denial of the entire claim or that part of the claim in")
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+120V")
+        Writefile(L_FILE_NAME,"%s","dispute (where ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","we ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","pay part of the claim but deny payment on the")
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+120V")
+        Writefile(L_FILE_NAME,"%s","remaining part).")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+150V")
+        Writefile(L_FILE_NAME,"%s","No right exists under this policy for ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","you ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","or others to make ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","us ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","party")
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+120V")
+        Writefile(L_FILE_NAME,"%s","to an action against any ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","insured.")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+150V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","COVERAGE MODIFICATIONS")
+        Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+        Writefile(L_FILE_NAME,"%s","<033>*c50h8v0P")
+        Writefile(L_FILE_NAME,"%s","<033>&a+75h+30V")
+        Writefile(L_FILE_NAME,"%s","LIABILITY  ")
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+120V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","If Part II is included in this policy and this policy covers a")
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+120V")
+        Writefile(L_FILE_NAME,"%s","residential dwelling under Part II, the following provisions apply:")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+150V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","PART II C")
+        Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+        Writefile(L_FILE_NAME,"%s","<033>*c50h8v0P")
+        Writefile(L_FILE_NAME,"%s","<033>&a+75h+30V")
+        Writefile(L_FILE_NAME,"%s","LIABILITY NOT INSURED")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+120V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","1.")
+        Writefile(L_FILE_NAME,"%s","<033>&a3200h+0V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","We ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","will not insure ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","bodily injury ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","or ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","property damage ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","arising")
+        Writefile(L_FILE_NAME,"%s","<033>&a3200h+120V")
+        Writefile(L_FILE_NAME,"%s","out of any consequences of the failure of any ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","insured ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","to")
+        Writefile(L_FILE_NAME,"%s","<033>&a3200h+120V")
+        Writefile(L_FILE_NAME,"%s","disclose the presence of any ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","lead-based paint ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","or ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","lead-based ")
+        Writefile(L_FILE_NAME,"%s","<033>&a3200h+120V")
+        Writefile(L_FILE_NAME,"%s","paint hazard ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","at the time of the sale or lease of a residential")
+        Writefile(L_FILE_NAME,"%s","<033>&a3200h+120V")
+        Writefile(L_FILE_NAME,"%s","dwelling.")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+150V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","2.")
+        Writefile(L_FILE_NAME,"%s","<033>&a3200h+0V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","We ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","will not defend any action which arises out of such failure.")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+150V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","As used in this endorsement, the following definitions apply:")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+150V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","Lead-based Paint")
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+120V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","Lead-based paint ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","means paint or other surface coatings that contain")
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+120V")
+        Writefile(L_FILE_NAME,"%s","lead equal to or in excess of 1.0 milligram per square centimeter or")
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+120V")
+        Writefile(L_FILE_NAME,"%s","0.5 percent by weight.")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+150V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","Lead-based Paint Hazard")
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+120V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","Lead-based paint hazard ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","means any condition that causes exposure ")
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+120V")
+        Writefile(L_FILE_NAME,"%s","to lead from lead-contaminated dust, lead-contaminated soil, or")
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+120V")
+        Writefile(L_FILE_NAME,"%s","lead-contaminated paint that is deteriorated or present in accessible")
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+120V")
+        Writefile(L_FILE_NAME,"%s","surfaces, friction surfaces, or impact surfaces that would result in")
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+120V")
+        Writefile(L_FILE_NAME,"%s","adverse human health effects as established by the appropriate")
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+120V")
+        Writefile(L_FILE_NAME,"%s","Federal agency.")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+150V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","Residential Dwelling")
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+120V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","Residential dwelling means:")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+120V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","1.")
+        Writefile(L_FILE_NAME,"%s","<033>&a3200h+0V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","A single-family dwelling, including attached structures such")
+        Writefile(L_FILE_NAME,"%s","<033>&a3200h+120V")
+        Writefile(L_FILE_NAME,"%s","as porches and stoops; or")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+150V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","2.")
+        Writefile(L_FILE_NAME,"%s","<033>&a3200h+0V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","A single-family dwelling unit in a structure that contains more")
+        Writefile(L_FILE_NAME,"%s","<033>&a3200h+120V")
+        Writefile(L_FILE_NAME,"%s","than one separate residential dwelling unit, and in which each")
+        Writefile(L_FILE_NAME,"%s","<033>&a3200h+120V")
+        Writefile(L_FILE_NAME,"%s","unit is used or occupied, or intended to be used or occupied, in")
+        Writefile(L_FILE_NAME,"%s","<033>&a3200h+120V")
+        Writefile(L_FILE_NAME,"%s","whole or in part, as the residence of one or more persons.")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+150V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","ADDITIONAL POLICY PROVISION")
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+120V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s",'Throughout this policy, the term "spouse" also includes a person')
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+120V")
+        Writefile(L_FILE_NAME,"%s","with whom an ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+        Writefile(L_FILE_NAME,"%s","insured ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","has entered into a civil union as recognized")
+        Writefile(L_FILE_NAME,"%s","<033>&a3000h+120V")
+        Writefile(L_FILE_NAME,"%s","under the New Jersey Civil Union Act.")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a100h7200V")
+        Writefile(L_FILE_NAME,"%s",l_copyright_8)
+        Writefile(L_FILE_NAME,"%s",l_arial_8)
+        Writefile(L_FILE_NAME,"%s"," 2007 MSO, Inc. ")
+
+        Writefile(L_FILE_NAME,"%s","<FF>")
+--      }
+--    Next bopendorse
+--  }
+Screen Exit
+Writefile(L_FILE_NAME,"%s%s",L_FORMFEED ,L_RESET )
+Closefile(L_FILE_NAME)
+End

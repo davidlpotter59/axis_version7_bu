@@ -1,0 +1,2735 @@
+%%
+/*
+Date Written: June 11, 2012
+
+Name: bu0431_102011.sd
+
+Copyright (c) 2012, SCIPS.com Inc.
+
+Modify
+Date                   By                  Comment
+--------------------------------------------------------------
+06/11/2012           JLB               new form created for self storage facility
+=============================================================
+*/
+
+Program
+  Name = "bu0431_102011";
+  Type = "File";
+  Domain = "SFPPRINT1";
+  Padcharacter = Space;
+
+ String L_FILE_NAME[16] = "bu0431_102011.cq";
+ Unsigned Ascii Number L_PAGE_NUMBER = 0;
+ String L_SFPLOCATION_ZIP;
+ Unsigned Ascii Number L_SFPMASTER_FORM[1];
+ Unsigned Ascii Number L_COVERGE_POS;    -- coverage horizontal pos
+ Unsigned Ascii Number L_REVISED_POS;    -- revised limit horizonal pos
+ Unsigned Ascii Number L_BASIC_POS;      -- basic limit horizonal pos
+ Unsigned Ascii Number L_DOLLAR_POS;
+ Unsigned Ascii Number L_FACTOR_POS;
+ Unsigned Ascii Number L_REVISED_FACTOR_POS;
+ Unsigned Ascii Number L_BUILDING_CODE_PERCENT[3]/decimals=2;
+ Unsigned Ascii Number L_BUILDING_CODE_PERCENT_2[3]/decimals=2;
+ Unsigned Ascii Number L_LIMIT_POS,
+                       l_form;
+ String L_LOB_CODE[10],
+        I_CODE;
+ Unsigned Ascii Number L_LINE_PCOUNTER;
+ Unsigned Ascii Number L_MAX_LINES = 50;
+ Unsigned Ascii Number L_PROPERTY_LIMIT[9];
+ Unsigned Ascii Number L_UTILITY_LIMIT[9];
+ Unsigned Ascii Number L_MECHANICAL_LIMIT[9];
+ Unsigned Ascii Number L_EXTERIOR_SIGNS_LIMIT[9];
+ Unsigned Ascii Number L_VALUEABLE_PAPERS_LIMIT[9];
+ Unsigned Ascii Number WATER_BACKUP_LIMIT;
+ Unsigned Ascii Number L_WATER_BACKUP_LIMIT;
+ Unsigned Ascii Number L_FMA100;
+ Unsigned Ascii Number L_LIMIT[9];
+ Unsigned Ascii Number L_BPSDEFAULT_LIMIT[9];
+ Unsigned Ascii Number L_REVISED_LIMIT[9];
+ String L_COMPANY_ID[10];
+ Unsigned Ascii Number L_DEDUCTIBLE_POS;
+ Unsigned Ascii Number L_EXTERIOR_SIGNS_LIMIT_NOT_ATTC;
+ Unsigned Ascii Number L_ATTACHED_TO_BUILDING;
+ Unsigned Ascii Number L_VALUABLE_PAPERS_NO;
+ Unsigned Ascii Number L_DEDUCTIBLE_SIGNS_OUTDOOR;
+ Unsigned Ascii Number L_WATER_DAMAGE;
+ Unsigned Ascii Number L_GLASS_SQFT;
+ Unsigned Ascii Number L_SIGNS_NOT_ATTACHED;
+
+ Unsigned Ascii number L_STATE[2],
+                        l_loop,
+                        l_found[1]=0;
+ Unsigned Ascii number L_LINE_OF_BUSINESS[4];
+ Unsigned Ascii Number L_BU0507;
+ wdate L_EFF_DATE;
+
+  Include "csfonts.inc"
+  Include "sfsrevname.var"
+  Include "swsut100.var"
+
+Initialization
+  Deletefile (L_FILE_NAME);
+
+Update
+Access SFPNAME,
+   Set SFPNAME:POLICY_NO    = SFPPRINT1:POLICY_NO,
+       SFPNAME:POL_YEAR     = SFPPRINT1:POL_YEAR,
+       SFPNAME:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic;
+
+Access SFPPRINT4,
+   Set SFPPRINT4:POLICY_NO    = SFPPRINT1:POLICY_NO,
+       SFPPRINT4:POL_YEAR     = SFPPRINT1:POL_YEAR,
+       SFPPRINT4:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic;
+
+Access SFPLOCATION,
+   Set SFPLOCATION:POLICY_NO    = SFPPRINT1:POLICY_NO,
+       SFPLOCATION:POL_YEAR     = SFPPRINT1:POL_YEAR,
+       SFPLOCATION:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic;
+
+Access SFPMASTER,
+   Set SFPMASTER:POLICY_NO    = SFPPRINT1:POLICY_NO,
+       SFPMASTER:POL_YEAR     = SFPPRINT1:POL_YEAR,
+       SFPMASTER:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Exact;
+
+L_SFPMASTER_FORM = SFPMASTER:FORM;
+
+Access BPSDEFAULT,
+   Set BPSDEFAULT:COMPANY_ID       = SFPNAME:COMPANY_ID,
+       BPSDEFAULT:LINE_OF_BUSINESS = SFPNAME:LINE_OF_BUSINESS,
+       BPSDEFAULT:FORM             = L_SFPMASTER_FORM, Generic
+
+Access bpsdefault2,
+   Set bpsdefault2:COMPANY_ID       = SFPNAME:COMPANY_ID,
+       bpsdefault2:state             = l_state,
+       bpsdefault2:LINE_OF_BUSINESS = SFPNAME:LINE_OF_BUSINESS, Generic
+
+Access SFSLINE,
+   Set SFSLINE:COMPANY_ID       = SFPNAME:COMPANY_ID,
+       SFSLINE:LINE_OF_BUSINESS = SFPNAME:LINE_OF_BUSINESS, Generic;
+
+L_COMPANY_ID = SFPNAME:COMPANY_ID
+L_LOB_CODE   = SFSLINE:LOB_CODE
+I_CODE = "BU0431"
+Include "swsut100.inc"
+
+Access SCIPSCONTROL,
+   Set SCIPSCONTROL:COMPANY_ID   = L_COMPANY_ID,
+       SCIPSCONTROL:STATE        = i_STATE,
+       SCIPSCONTROL:LOB_CODE     = L_LOB_CODE, Exact
+
+If SCIPSCONTROL:DUPLEX_SHORT_EDGE = 1 Then
+  {
+    Writefile(L_FILE_NAME,"%s",L_SEDUP)
+  }
+Else
+  {
+    Writefile(L_FILE_NAME,"%s",L_LEDUP)
+  }
+
+--****SCIPSCONTROL VARIABLES****--
+
+L_ATTACHED_TO_BUILDING     = SCIPSCONTROL:SIGNS_ATTACHED_TO_BUILDING
+L_DEDUCTIBLE_SIGNS_OUTDOOR = SCIPSCONTROL:SIGNS_ATTACHED_DEDUCTIBLE
+L_VALUABLE_PAPERS_NO       = SCIPSCONTROL:VALUABLE_PAPERS_PAGE_NO
+L_WATER_DAMAGE             = SCIPSCONTROL:WATER_DAMAGE
+L_GLASS_SQFT               = SCIPSCONTROL:GLASS_SQUARE_FEET
+L_SIGNS_NOT_ATTACHED       = SIGNS_NOT_ATTACHED_TO_BUILDING
+
+--****SCIPSCONTROL VARIABLES****--
+
+While SFPLOCATION:POLICY_NO    = SFPPRINT1:POLICY_NO And
+      SFPLOCATION:POL_YEAR     = SFPPRINT1:POL_YEAR And
+      SFPLOCATION:END_SEQUENCE = SFPPRINT1:END_SEQUENCE
+  {
+    l_found = 1
+    If l_found = 1 and
+       l_found <> 0 then
+      {
+--    l_found = 1
+
+    L_SFPLOCATION_ZIP = If (Val(SFPLOCATION:STR_ZIPCODE[6,9]) = 0) Then
+                          SFPLOCATION:STR_ZIPCODE[1,5]
+                        Else
+                          SFPLOCATION:STR_ZIPCODE[1,5] + "-" +
+                          SFPLOCATION:STR_ZIPCODE[6,9]
+--border
+
+If SCIPSCONTROL:PRINT_BORDERS_ON_DEC_PAGE = 1 Then
+    {
+      Writefile(L_FILE_NAME,"%s","<033>&a140h-220V<033>*c10a3100b0P") --left vertical li
+      Writefile(L_FILE_NAME,"%s","<033>&a5585h-0V<033>*c10a3100b0P")  --right vertical
+      Writefile(L_FILE_NAME,"%s","<033>&a140h-0V<033>*c5467h20v0P")   --top horizontal line to
+      Writefile(L_FILE_NAME,"%s","<033>&a140h7300V<033>*c5467h20v0P") --bottom horizontal line
+    }
+
+L_PAGE_NUMBER      = 1
+L_STATE            = BOPGENERAL:STATE
+L_COMPANY_ID       = bopgeneral:COMPANY_ID
+L_LINE_OF_BUSINESS = sfpname:LINE_OF_BUSINESS
+--l_form             = sfpmaster:form
+
+ Access sfsend,
+    Set sfsend:COMPANY_ID       = L_COMPANY_ID,
+        sfsend:STATE            = L_STATE,
+        sfsend:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+        sfsend:form             = l_form,
+        sfsend:CODE             = I_CODE, generic
+
+  While sfsend:COMPANY_ID       = L_COMPANY_ID and
+        sfsend:STATE            = L_STATE and
+        sfsend:LINE_OF_BUSINESS = l_LINE_OF_BUSINESS and
+        sfsend:form             = l_form and
+        sfsend:CODE             = I_CODE
+    {
+      --start of sfsend check
+      If (sfpname:eff_date >= sfsend:eff_date and
+         (sfpname:eff_date < sfsend:exp_date or
+          sfsend:exp_date = 0)) then
+        {
+          l_eff_date = sfsend:eff_date
+        }
+      next sfsend
+    }
+
+  Access sfsend,
+     Set sfsend:COMPANY_ID       = L_COMPANY_ID,
+         sfsend:STATE            = L_STATE,
+         sfsend:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+         sfsend:form             = l_form,
+         sfsend:CODE             = I_CODE,
+         sfsend:EFF_DATE         = L_EFF_DATE, exact
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a420h7200V")
+  Writefile(L_FILE_NAME,"%s",l_copyright_6)
+  Writefile(L_FILE_NAME,"%s"," ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","2011 MSO, Inc.")
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a4700h0V")
+  Writefile(L_FILE_NAME,"%s","BU 04 31")
+  Writefile(L_FILE_NAME,"%s"," ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","10 11")
+  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+
+L_STATE            = BOPGENERAL:STATE
+L_COMPANY_ID       = sfpname:COMPANY_ID
+L_LINE_OF_BUSINESS = sfpname:LINE_OF_BUSINESS
+
+Access SFSSTATE,
+   Set SFSSTATE:COMPANY_ID = L_COMPANY_ID,
+       SFSSTATE:STATE      = i_STATE,
+       SFSSTATE:COUNTY     = "000", Exact
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a180h0V")
+  Writefile(L_FILE_NAME,"%s","DECLARATIONS SUPPLEMENT")
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+  Writefile(L_FILE_NAME,"%s","<033>*c50h6v0P")
+  Writefile(L_FILE_NAME,"%s","<033>&a+75h+30V")
+  Writefile(L_FILE_NAME,"%s","SELF STORAGE FACILITY")
+  Writefile(L_FILE_NAME,"%s","<033>&a140h+40V<033>*c5467h8v0P")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a180h+30V")
+  Writefile(L_FILE_NAME,"%s","Policy No: ")
+
+  Writefile(L_FILE_NAME,"%s",Trun(SFSLINE:ALPHA))
+
+  Writefile(L_FILE_NAME,"%n",SFPPRINT1:POLICY_NO)
+  Writefile(L_FILE_NAME,"%s","<033>&a2250h+0V")
+  Writefile(L_FILE_NAME,"%s","Effective: ")
+  Writefile(L_FILE_NAME,"%d",sfpname:EFF_DATE)
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a400h+20V")
+  Writefile(L_FILE_NAME,"%s","Each basic limit ")
+  Writefile(L_FILE_NAME,"%s","<033>&a1110h-30V<033>*c90h2v0P")
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+30V")
+  Writefile(L_FILE_NAME,"%s"," or, if increased, each revised limit ")
+  Writefile(L_FILE_NAME,"%s","<033>&a2680h-30V<033>*c90h2v0P")
+  Writefile(L_FILE_NAME,"%s","<033>&a2790h+30V")
+  Writefile(L_FILE_NAME,"%s","shown below is")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_BOLD_9)
+  Writefile(L_FILE_NAME,"%s", " our ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","maximum limit of liability for the coverage ")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+  Writefile(L_FILE_NAME,"%s","in any occurrence, except as otherwise stated.")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+--  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a180h+0V")
+  Writefile(L_FILE_NAME,"%s","Location")
+  Writefile(L_FILE_NAME,"%s","<033>&a900h+0V")
+  Writefile(L_FILE_NAME,"%n",SFPLOCATION:PREM_NO)
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+0V")
+  Writefile(L_FILE_NAME,"%s","Building")
+  Writefile(L_FILE_NAME,"%s","<033>&a1900h+0V")
+  Writefile(L_FILE_NAME,"%n",SFPLOCATION:BUILD_NO)
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a2500h+0V")
+  Writefile(L_FILE_NAME,"%s",SFPLOCATION:ADDRESS)
+  Writefile(L_FILE_NAME,"%s","<NL>")
+  For l_loop = 1 to 3
+    {
+      If SFPLOCATION:ADDRESS1[l_loop] <> "" Then
+        {
+          Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+          Writefile(L_FILE_NAME,"%s","<033>&a2500h+0V")
+          Writefile(L_FILE_NAME,"%s",SFPLOCATION:ADDRESS1[l_loop])
+          Writefile(L_FILE_NAME,"%s","<NL>")
+        }
+    }
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a2500h+0V")
+  Writefile(L_FILE_NAME,"%s",Trun(SFPLOCATION:CITY))
+  Writefile(L_FILE_NAME,"%s",", ")
+  Writefile(L_FILE_NAME,"%s",SFPLOCATION:STR_STATE)
+  Writefile(L_FILE_NAME,"%s"," ")
+  Writefile(L_FILE_NAME,"%s",L_SFPLOCATION_ZIP)
+  Writefile(L_FILE_NAME,"%s","<NL>")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a1570h+40V")
+  Writefile(L_FILE_NAME,"%s","COVERAGE")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a1690h+0V")
+  Writefile(L_FILE_NAME,"%s","PART I")
+  Writefile(L_FILE_NAME,"%s","<nl>")
+
+  L_COVERGE_POS = 180
+  L_BASIC_POS = 2550
+  L_REVISED_POS = 2430
+  L_DOLLAR_POS = 3575
+  L_DEDUCTIBLE_POS = 1840
+  L_FACTOR_POS = 2745
+  L_REVISED_FACTOR_POS = 2350
+  L_LIMIT_POS = 3650
+
+  Access BOPGENERAL ,
+     Set BOPGENERAL:POLICY_NO    = SFPPRINT1:POLICY_NO,
+         BOPGENERAL:POL_YEAR     = SFPPRINT1:POL_YEAR,
+         BOPGENERAL:END_SEQUENCE = SFPPRINT1:END_SEQUENCE,
+         BOPGENERAL:PREM_NO      = SFPLOCATION:PREM_NO,
+         BOPGENERAL:BUILD_NO     = SFPLOCATION:BUILD_NO,Generic
+
+ Access bpsdefault2,
+    Set bpsdefault2:COMPANY_ID       = L_COMPANY_ID,
+        bpsdefault2:STATE            = bopgeneral:state,
+        bpsdefault2:LINE_OF_BUSINESS = bopgeneral:line_of_business,
+        bpsdefault2:supplemental_form  = I_CODE, generic
+
+  While bpsdefault2:COMPANY_ID       = L_COMPANY_ID and
+        bpsdefault2:STATE            = bopgeneral:STATE and
+        bpsdefault2:LINE_OF_BUSINESS = bopgeneral:LINE_OF_BUSINESS and
+        bpsdefault2:supplemental_form  = I_CODE
+    {
+      --start of bpsdefault2 check
+      If (sfpname:eff_date >= bpsdefault2:eff_date and
+         (sfpname:eff_date < bpsdefault2:exp_date or
+          bpsdefault2:exp_date = 0)) then
+        {
+          l_eff_date = bpsdefault2:eff_date
+        }
+      next bpsdefault2
+    }
+
+  Access bpsdefault2,
+     Set bpsdefault2:COMPANY_ID       = L_COMPANY_ID,
+         bpsdefault2:STATE            = bopgeneral:STATE,
+         bpsdefault2:LINE_OF_BUSINESS = bopgeneral:LINE_OF_BUSINESS,
+         bpsdefault2:supplemental_form = I_CODE,
+         bpsdefault2:EFF_DATE         = l_eff_date, exact
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a180h+60V")
+  Writefile(L_FILE_NAME,"%s","Accounts Receivable ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_8)
+
+  Writefile(L_FILE_NAME,"%s","<033>&a-30V")
+  Writefile(L_FILE_NAME,"%s","(1)")
+  Writefile(L_FILE_NAME,"%s","<033>&a+30V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:")
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")                  --Basic Limit Accounts Receivable
+--  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+--  Writefile(L_FILE_NAME,"%s","     10,000")
+
+  If bpsdefault2:ar_limit = bopgeneral:ar_limit then
+    {
+      Writefile(L_FILE_NAME,"%s%s%n%s%s",L_LETTER_GOTHIC_BOLD_12,"<033>&a",L_LIMIT_POS,"h+0V",
+                        Str(BPSDEFAULT2:AR_LIMIT,"ZZZ,ZZZ,ZZ9"))
+    }
+  L_LIMIT            = BOPGENERAL:PROPERTY_LIMIT * (bpsdefault2:AR_PERCENT Divide 100)
+  L_REVISED_LIMIT    = BOPGENERAL:AR_LIMIT
+  L_BPSDEFAULT_LIMIT = bpsdefault2:AR_LIMIT
+
+  Do PRINT_LIMIT
+
+  Writefile(L_FILE_NAME,"%s%s%n%s%s",L_ARIAL_BOLD,"<033>&a",
+                    L_COVERGE_POS,"h+0V","Building")
+
+  Writefile(L_FILE_NAME,"%s%s%n%s%s%s%s",L_ARIAL_BOLD,"<033>&a",
+                    L_COVERGE_POS,"h+120V","E.     ",L_ARIAL,
+                    "Supplies and Materials: Loss by Theft")
+
+  Writefile(L_FILE_NAME,"%s%s%n%s%s%s%n%s%s%s",L_ARIAL,"<033>&a",
+                     L_BASIC_POS+250,"h+0V","Limit:",
+                    "<033>&a",L_DOLLAR_POS,
+                    "h+0V",L_ARIAL_BOLD,"$")                  --Basic Limit
+
+--  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+--  Writefile(L_FILE_NAME,"%s","      2,000")
+  Writefile(L_FILE_NAME,"%s%s%n%s%s",L_LETTER_GOTHIC_BOLD_12,"<033>&a",L_LIMIT_POS,"h+0V",
+                        Str(BPSDEFAULT2:SUPPLIES_LIMIT,"ZZZ,ZZZ,ZZ9"))
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+180V")
+  Writefile(L_FILE_NAME,"%s","Building Code / Law Coverage*")
+
+/*  If bpsdefault2:BUILDING_CODE_LIMIT > 0 Then
+    {
+      Writefile(L_FILE_NAME,"%s",L_ARIAL)
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s","Basic Limit:")
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+      Writefile(L_FILE_NAME,"%s","$")                  --Basic Limit
+
+      Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s",Str(bpsdefault2:BUILDING_CODE_LIMIT,"ZZZ,ZZZ,ZZ9"))
+      Writefile(L_FILE_NAME,"%s","<NL>")
+    }
+  Else
+    {*/
+
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_FACTOR_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL)
+      Writefile(L_FILE_NAME,"%s","Factor:")                  --factor
+/*              Writefile(L_FILE_NAME,"%s","<033>&a")
+              Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+              Writefile(L_FILE_NAME,"%s","h+0V")
+              Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+              Writefile(L_FILE_NAME,"%s","  .10")
+*/
+      L_BUILDING_CODE_PERCENT = bpsdefault2:BUILDING_CODE_factor divide 100
+      If SCIPSCONTROL:PRINT_REVISED_ON_SUPP = 1 Then
+        {
+          If bpsdefault2:BUILDING_CODE_factor  >= BOPGENERAL:BUILDING_CODE_PERCENT Then
+            {
+              Writefile(L_FILE_NAME,"%s","<033>&a")
+              Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+              Writefile(L_FILE_NAME,"%s","h+0V")
+              Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+--              Writefile(L_FILE_NAME,"%s","  .10")
+                Writefile(L_FILE_NAME,"%s",Str(L_BUILDING_CODE_PERCENT,"ZZZZ,ZZZ.99"))
+--                Writefile(L_FILE_NAME,"%s","<NL>")
+            }
+
+          Writefile(L_FILE_NAME,"%s","<NL>")
+          Writefile(L_FILE_NAME,"%s","<033>&a")
+          Writefile(L_FILE_NAME,"%n",L_REVISED_FACTOR_POS)
+          Writefile(L_FILE_NAME,"%s","h+0V")
+          Writefile(L_FILE_NAME,"%s",L_ARIAL)
+          Writefile(L_FILE_NAME,"%s","Revised Factor:")                  --revised factor
+          If (bpsdefault2:BUILDING_CODE_factor = BOPGENERAL:BUILDING_CODE_PERCENT) Then
+            {
+              Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+              Writefile(L_FILE_NAME,"%s","<033>&a")
+              Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+              Writefile(L_FILE_NAME,"%s","h+0V")
+--              Writefile(L_FILE_NAME,"%s",Str(0,"ZZZZ,ZZZ.99"))
+            }
+          Else
+            {
+              Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+              Writefile(L_FILE_NAME,"%s","<033>&a")
+              Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+              Writefile(L_FILE_NAME,"%s","h+0V")
+              Writefile(L_FILE_NAME,"%s",Str(BOPGENERAL:BUILDING_CODE_PERCENT divide 100,"ZZZ,ZZZ.99"))
+
+            }
+        }  --scips control if
+      Else
+        {
+          If (bpsdefault2:BUILDING_CODE_factor >= BOPGENERAL:BUILDING_CODE_PERCENT) Then
+            {
+              Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+              Writefile(L_FILE_NAME,"%s","<033>&a")
+              Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+              Writefile(L_FILE_NAME,"%s","h+0V")
+              Writefile(L_FILE_NAME,"%s",Str(L_BUILDING_CODE_PERCENT,"ZZZZ,ZZZ.99"))
+              Writefile(L_FILE_NAME,"%s","<NL>")
+            }
+          Else
+            {
+              Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+              Writefile(L_FILE_NAME,"%s","<033>&a")
+              Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+              Writefile(L_FILE_NAME,"%s","h+0V")
+              Writefile(L_FILE_NAME,"%s",Str(BOPGENERAL:BUILDING_CODE_PERCENT divide 100,"ZZZZ,ZZZ.99"))
+              Writefile(L_FILE_NAME,"%s","<NL>")
+            }
+        }
+--    } --   If bpsdefault2:BUILDING_CODE_LIMIT > 0 Then
+
+  Writefile(L_FILE_NAME,"%s","<NL>")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+60V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC)
+  Writefile(L_FILE_NAME,"%s","*  Does Not Apply if Insured on Actual Cash Value Basis")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+--  Writefile(L_FILE_NAME,"%s","<NL>")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+60V")
+  Writefile(L_FILE_NAME,"%s","Building Glass")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_REVISED_POS-400)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Limit per Occurrence:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+--  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+--  Writefile(L_FILE_NAME,"%s","      1,000")
+  Writefile(L_FILE_NAME,"%s",Str(bpsdefault2:BUILDING_GLASS_limit,"ZZZ,ZZZ,ZZ9"))
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_REVISED_POS-850)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Limit on Any One Pane or Unit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s", "<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+--  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+--  Writefile(L_FILE_NAME,"%s","        100")
+  Writefile(L_FILE_NAME,"%s",Str(bpsdefault2:building_GLASS_per_PANE,"ZZZ,ZZZ,ZZ9"))
+  Writefile(L_FILE_NAME,"%s","<NL>")
+--  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+60V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC)
+  Writefile(L_FILE_NAME,"%s","* Separate Specific Amount Not Subject to Coverage B Limit")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+--  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+60V")
+  Writefile(L_FILE_NAME,"%s","Business Property Extension")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+  Writefile(L_FILE_NAME,"%s","Consequent Loss (Spoilage)")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_8)
+  Writefile(L_FILE_NAME,"%s","<033>&a-30V")
+  Writefile(L_FILE_NAME,"%s","(1)")
+  Writefile(L_FILE_NAME,"%s","<033>&a+30V")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%N",L_COVERGE_POS+200)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_bullet_6)
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a600h+0V")
+  Writefile(L_FILE_NAME,"%s","Utility Services")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+--  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+--  Writefile(L_FILE_NAME,"%s","      1,000")
+  L_UTILITY_LIMIT = BOPGENERAL:PROPERTY_LIMIT * (bpsdefault2:UTILITY_PERCENT Divide 100)
+  If (L_UTILITY_LIMIT > bpsdefault2:UTILITY_MAX) Then
+    {
+      L_UTILITY_LIMIT = bpsdefault2:UTILITY_MAX
+    }
+  L_REVISED_LIMIT    = BOPGENERAL:UTILITY_LIMIT
+  L_BPSDEFAULT_LIMIT = bpsdefault2:UTILITY_LIMIT
+  L_LIMIT            = L_UTILITY_LIMIT
+
+  Do PRINT_LIMIT
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS+200)
+  Writefile(L_FILE_NAME,"%s","h+60V")
+  Writefile(L_FILE_NAME,"%s",L_bullet_6)
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a600h+0V")
+  Writefile(L_FILE_NAME,"%s","Mechanical Breakdown")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:*")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+--  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+--  Writefile(L_FILE_NAME,"%s","        500")
+
+  L_MECHANICAL_LIMIT = BOPGENERAL:PROPERTY_LIMIT * (bpsdefault2:MECHANICAL_PERCENT Divide 100)
+  If (L_MECHANICAL_LIMIT > bpsdefault2:MECHANICAL_MAX) Then
+    {
+      L_MECHANICAL_LIMIT = bpsdefault2:MECHANICAL_MAX
+    }
+  L_REVISED_LIMIT    = BOPGENERAL:MECHANICAL_LIMIT
+  L_BPSDEFAULT_LIMIT = bpsdefault2:MECHANICAL_breakdown
+  L_LIMIT            = L_MECHANICAL_LIMIT
+
+  Do PRINT_LIMIT
+
+  --The wording "Revised Limit" is printed from the Do PRINT_LIMIT above
+  --the asterisk below was added for the MSO 2007 Version because Do PRINT_LIMIT
+  --is used multiple times but not all required the asterisk
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a3060h-120V")
+  Writefile(L_FILE_NAME,"%s","*")
+
+  Writefile(L_FILE_NAME,"%s","<NL>")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_italic)
+  Writefile(L_FILE_NAME,"%s","* Annual Aggregate Limit")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+--  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+60V")
+  Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+  Writefile(L_FILE_NAME,"%s","Off Premises")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS+200)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_bullet_6)
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a600h+0V")
+  Writefile(L_FILE_NAME,"%s","Coverage A")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS+250)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",Str(bpsdefault2:OFF_PREMISES_A,"ZZZ,ZZZ,ZZ9"))
+
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS+700)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","< Total Limit - All Locations")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS+200)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_bullet_6)
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a600h+0V")
+  Writefile(L_FILE_NAME,"%s","Coverage B")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:")
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  If SCIPSCONTROL:PRINT_REVISED_ON_SUPP = 1 Then
+    {
+      If bpsdefault2:OFF_PREMISES_B <= SFPMASTER:OFF_PREMISES_LIMIT Then
+        {    -- if < do not print it
+          Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+          Writefile(L_FILE_NAME,"%s","<033>&a")
+          Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+          Writefile(L_FILE_NAME,"%s","h+0V")
+          Writefile(L_FILE_NAME,"%s",Str(bpsdefault2:OFF_PREMISES_B,"ZZZ,ZZZ,ZZ9"))
+        }
+      Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_LIMIT_POS+700)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL)
+      Writefile(L_FILE_NAME,"%s","< Total Limit - All Locations")
+      Writefile(L_FILE_NAME,"%s","<NL>")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL)
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_REVISED_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s","Revised Limit:")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+      Writefile(L_FILE_NAME,"%s","$")
+
+      If bpsdefault2:off_premises_b < sfpmaster:off_premises_limit and
+         bpsdefault2:off_premises_b <= bopgeneral:off_premises_limit then
+        {
+          If BOPGENERAL:OFF_PREMISES_LIMIT = SFPMASTER:OFF_PREMISES_LIMIT Or
+             BOPGENERAL:OFF_PREMISES_LIMIT = 0 Then
+            {
+              Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+              Writefile(L_FILE_NAME,"%s","<033>&a")
+              Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+              Writefile(L_FILE_NAME,"%s","h+0V")
+              Writefile(L_FILE_NAME,"%s",Str(SFPMASTER:OFF_PREMISES_LIMIT,"ZZZ,ZZZ,ZZ9"))
+            }
+        Else
+            {
+              Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+              Writefile(L_FILE_NAME,"%s","<033>&a")
+              Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+              Writefile(L_FILE_NAME,"%s","h+0V")
+              Writefile(L_FILE_NAME,"%s",Str(BOPGENERAL:OFF_PREMISES_LIMIT,"ZZZ,ZZZ,ZZ9"))
+            }
+        }
+      Else
+        {
+          Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+          Writefile(L_FILE_NAME,"%s","<033>&a")
+          Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+          Writefile(L_FILE_NAME,"%s","h+0V")
+--          Writefile(L_FILE_NAME,"%s",Str(0,"ZZZ,ZZZ,ZZ9"))
+        }
+    }
+  Else --do not print revised limit
+    {
+      If bpsdefault2:OFF_PREMISES_B >= SFPMASTER:OFF_PREMISES_LIMIT Then
+        {
+          Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+          Writefile(L_FILE_NAME,"%s","<033>&a")
+          Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+          Writefile(L_FILE_NAME,"%s","h+0V")
+          Writefile(L_FILE_NAME,"%s",Str(bpsdefault2:OFF_PREMISES_B ,"ZZZ,ZZZ,ZZ9"))
+        }
+      Else
+        {
+          Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+          Writefile(L_FILE_NAME,"%s","<033>&a")
+          Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+          Writefile(L_FILE_NAME,"%s","h+0V")
+          Writefile(L_FILE_NAME,"%s",Str(SFPMASTER:OFF_PREMISES_LIMIT,"ZZZ,ZZZ,ZZ9"))
+        }
+    }
+
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS+700)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","< Total Limit - All Locations")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+--  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+60V")
+  Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+  Writefile(L_FILE_NAME,"%s","Personal Effects ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_8)
+  Writefile(L_FILE_NAME,"%s","<033>&a-30V")
+  Writefile(L_FILE_NAME,"%s","(1)")
+  Writefile(L_FILE_NAME,"%s","<033>&a+30V")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS+250)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",Str(bpsdefault2:PERSONAL_EFFECTS,"ZZZ,ZZZ,ZZ9"))
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+120V")
+  Writefile(L_FILE_NAME,"%s","Credit Card / Forgery / Counterfeit Money")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+
+  L_REVISED_LIMIT    = bpsdefault2:credit_card
+  L_BPSDEFAULT_LIMIT = bpsdefault2:credit_card
+  L_LIMIT            = bpsdefault2:credit_card
+  Do PRINT_LIMIT
+
+/*      Writefile(L_FILE_NAME,"%s",L_ARIAL)
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_REVISED_POS)
+      Writefile(L_FILE_NAME,"%s","h+120V")
+      Writefile(L_FILE_NAME,"%s","Revised Limit:")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+      Writefile(L_FILE_NAME,"%s","$")
+*/
+--  If sfpname:company_id <> "FARMERS" then
+--    {
+      Writefile(L_FILE_NAME,"%s",L_ARIAL)
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_DEDUCTIBLE_POS-400)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s","Revised Deductible per Occurrence:")
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+      Writefile(L_FILE_NAME,"%s","$")
+      Writefile(L_FILE_NAME,"%s","<NL>")
+--    }
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+60V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","Debris Removal")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_FACTOR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Factor:")
+
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",str(bpsdefault2:DEBRIS_REMOVAL_FACTOR divide 100,"ZZZ,ZZZZ.99"))
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+120V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  L_REVISED_LIMIT    = BOPGENERAL:debris_removal_limit
+  L_BPSDEFAULT_LIMIT = BPSDEFAULT2:debris_removal_limit
+  L_LIMIT            = BPSDEFAULT2:debris_removal_limit
+  Do PRINT_LIMIT
+
+  Writefile(L_FILE_NAME,"%s","<NL>")
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+60V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","Dwelling Loss of Use")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_FACTOR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Factor:")
+
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","        .10")
+--  Writefile(L_FILE_NAME,"%s",str(bpsdefault2:DEBRIS_REMOVAL_FACTOR divide 100,"ZZZ,ZZZZ.99"))
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+180V")
+  Writefile(L_FILE_NAME,"%s","Electronic Data")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:*")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+--  L_REVISED_LIMIT    = BOPGENERAL1:electronic_data
+  L_BPSDEFAULT_LIMIT = BPSDEFAULT2:electronic_data
+  L_LIMIT            = BPSDEFAULT2:electronic_data
+  Do PRINT_LIMIT
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a3060h-120V")
+  Writefile(L_FILE_NAME,"%s","*")
+
+  Writefile(L_FILE_NAME,"%s","<NL>")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_italic)
+  Writefile(L_FILE_NAME,"%s","* Annual Aggregate Limit")
+
+  Writefile(L_FILE_NAME,"%s","<NL>")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+60V")
+  Writefile(L_FILE_NAME,"%s","Employee Dishonesty")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  If sfpname:company_id = "FARMERS" then
+    {
+--      L_REVISED_LIMIT    = BPSDEFAULT2:employee_dishonesty
+      L_BPSDEFAULT_LIMIT = BPSDEFAULT2:employee_dishonesty
+--      L_LIMIT            = BPSDEFAULT2:employee_dishonesty
+--      Do PRINT_LIMIT
+      Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s",Str(L_BPSDEFAULT_LIMIT,"ZZZ,ZZZ,ZZ9"))
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL)
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_REVISED_POS)
+      Writefile(L_FILE_NAME,"%s","h+120V")
+      Writefile(L_FILE_NAME,"%s","Revised Limit:")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+      Writefile(L_FILE_NAME,"%s","$")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL)
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_DEDUCTIBLE_POS-400)
+      Writefile(L_FILE_NAME,"%s","h+120V")
+      Writefile(L_FILE_NAME,"%s","Revised Deductible per Occurrence:")
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+      Writefile(L_FILE_NAME,"%s","$")
+      Writefile(L_FILE_NAME,"%s",L_letter_gothic_bold_12)
+--      Writefile(L_FILE_NAME,"%n",L_limit_POS)
+      Writefile(L_FILE_NAME,"%s","        200")
+    }
+  else
+    {
+      L_REVISED_LIMIT    = BPSDEFAULT2:employee_dishonesty
+      L_BPSDEFAULT_LIMIT = BPSDEFAULT2:employee_dishonesty
+      L_LIMIT            = BPSDEFAULT2:employee_dishonesty
+      Do PRINT_LIMIT
+
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL)
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_DEDUCTIBLE_POS-400)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s","Revised Deductible per Occurrence:")
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+      Writefile(L_FILE_NAME,"%s","$")
+    }
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+150V")
+  Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+  Writefile(L_FILE_NAME,"%s","Note: ")
+  Writefile(L_FILE_NAME,"%s",l_arial_bold_8)
+  Writefile(L_FILE_NAME,"%s","(1) ")
+  Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+  Writefile(L_FILE_NAME,"%s","Applies Only With Coverage B")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a2800h7200V")
+  Writefile(L_FILE_NAME,"%s","- ")
+  Writefile(L_FILE_NAME,"%n",l_page_number)
+  Writefile(L_FILE_NAME,"%s"," -")
+  Writefile(L_FILE_NAME,"%s","<FF>")
+
+
+                     --**** Start of PAGE 2 ****
+
+
+  If SCIPSCONTROL:PRINT_BORDERS_ON_DEC_PAGE = 1 Then
+    {
+      Writefile(L_FILE_NAME,"%s","<033>&a140h-220V<033>*c10a3100b0P")   --left vertical li
+      Writefile(L_FILE_NAME,"%s","<033>&a5585h-0V<033>*c10a3100b0P")   --right vertical
+      Writefile(L_FILE_NAME,"%s","<033>&a140h-0V<033>*c5467h20v0P") --top horizontal line to
+      Writefile(L_FILE_NAME,"%s","<033>&a140h7300V<033>*c5467h20v0P") --bottom horizontal line
+    }
+
+L_STATE            = BOPGENERAL:STATE
+L_COMPANY_ID       = sfpname:COMPANY_ID
+L_LINE_OF_BUSINESS = sfpname:LINE_OF_BUSINESS
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a180h0V")
+  Writefile(L_FILE_NAME,"%s","DECLARATIONS SUPPLEMENT")
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+  Writefile(L_FILE_NAME,"%s","<033>*c50h6v0P")
+  Writefile(L_FILE_NAME,"%s","<033>&a+75h+30V")
+  Writefile(L_FILE_NAME,"%s","SELF STORAGE FACILITY")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a4700h0V")
+  Writefile(L_FILE_NAME,"%s","BU 04 31")
+  Writefile(L_FILE_NAME,"%s"," ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","10 11")
+--  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+
+/*  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a4750h0V")
+  Writefile(L_FILE_NAME,"%s",Trun(SFPPRINT4:FORM_PRINT))
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s"," ")
+  Writefile(L_FILE_NAME,"%s",SFPPRINT4:EDITION_PRINT)*/
+
+  Writefile(L_FILE_NAME,"%s","<033>&a140h+60V<033>*c5467h5v0P")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a180h+0V")
+  Writefile(L_FILE_NAME,"%s","Policy No: ")
+
+  Writefile(L_FILE_NAME,"%s",Trun(SFSLINE:ALPHA))
+
+  Writefile(L_FILE_NAME,"%n",SFPPRINT1:POLICY_NO)
+  Writefile(L_FILE_NAME,"%s","<033>&a2250h+0V")
+  Writefile(L_FILE_NAME,"%s","Effective: ")
+  Writefile(L_FILE_NAME,"%d",SFPNAME:EFF_DATE)
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a180h+20V")
+  Writefile(L_FILE_NAME,"%s","Location")
+  Writefile(L_FILE_NAME,"%s","<033>&a900h+0V")
+  Writefile(L_FILE_NAME,"%n",SFPLOCATION:PREM_NO)
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+0V")
+  Writefile(L_FILE_NAME,"%s","Building")
+  Writefile(L_FILE_NAME,"%s","<033>&a1900h+0V")
+  Writefile(L_FILE_NAME,"%n",SFPLOCATION:BUILD_NO)
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a2800h+0V")
+  Writefile(L_FILE_NAME,"%s","COVERAGE")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a2900h+0V")
+  Writefile(L_FILE_NAME,"%s","PART I")
+  Writefile(L_FILE_NAME,"%s","<nl>")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+20V")
+  Writefile(L_FILE_NAME,"%s","Fire Expense Coverages")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_BULLET)
+  Writefile(L_FILE_NAME,"%s",l_arial)
+  Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+  Writefile(L_FILE_NAME,"%s","Fire Department Service Charge")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS+250)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",Str(BPSDEFAULT2:FIRE_DEPT,"ZZZ,ZZZ,ZZ9"))
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_BULLET)
+  Writefile(L_FILE_NAME,"%s",l_arial)
+  Writefile(L_FILE_NAME,"%s","<033>&a400h+0V")
+  Writefile(L_FILE_NAME,"%s","Fire Extinguisher Recharge Expenses")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS+250)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",Str(BPSDEFAULT2:FIRE_EXTINGUISHER,"ZZZ,ZZZ,ZZ9"))
+
+  Writefile(L_FILE_NAME,"%s","<NL>")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+40V")
+  Writefile(L_FILE_NAME,"%s","Lock Replacement")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  L_REVISED_LIMIT    = BPSDEFAULT2:lock_replacement
+  L_BPSDEFAULT_LIMIT = BPSDEFAULT2:lock_replacement
+  L_LIMIT            = BPSDEFAULT2:lock_replacement
+  Do PRINT_LIMIT
+
+--  Writefile(L_FILE_NAME,"%s","<NL>")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+40V")
+  Writefile(L_FILE_NAME,"%s","Loss of Income / Dependent Property")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+--  L_REVISED_LIMIT    = BPSDEFAULT2:loss_of_income_dependent
+  L_BPSDEFAULT_LIMIT = BPSDEFAULT2:loss_of_income_dependent
+  L_LIMIT            = BPSDEFAULT2:loss_of_income_dependent
+  Do PRINT_LIMIT
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+40V")
+  Writefile(L_FILE_NAME,"%s","Loss of Income / Interruption of Computer Services")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+120V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:*")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  L_REVISED_LIMIT    = BOPGENERAL:loss_income_limit
+  L_BPSDEFAULT_LIMIT = BPSDEFAULT2:loss_of_income_interruption
+  L_LIMIT            = BPSDEFAULT2:loss_of_income_interruption
+  Do PRINT_LIMIT
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a3060h-120V")
+  Writefile(L_FILE_NAME,"%s","*")
+
+--  Writefile(L_FILE_NAME,"%s","<NL>")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+30V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_italic)
+  Writefile(L_FILE_NAME,"%s","* Annual Aggregate Limit")
+
+  Writefile(L_FILE_NAME,"%s","<NL>")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+40V")
+  Writefile(L_FILE_NAME,"%s","Outdoor (Exterior) Signs / Satellite Dish")
+
+  If L_ATTACHED_TO_BUILDING = 1 Then
+    {
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s","Attached to Building")
+    }
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+--  L_EXTERIOR_SIGNS_LIMIT = BOPGENERAL:PROPERTY_LIMIT  * (BPSDEFAULT:EXTERIOR_SIGNS_PERCENT Divide 100)
+
+L_REVISED_LIMIT    = BOPGENERAL:SIGNS_LIMIT
+L_BPSDEFAULT_LIMIT = BPSDEFAULT2:outdoor_signs
+--L_LIMIT            = L_EXTERIOR_SIGNS_LIMIT
+Do PRINT_LIMIT
+
+--  If L_DEDUCTIBLE_SIGNS_OUTDOOR = 1 Then
+--    {
+      Writefile(L_FILE_NAME,"%s",L_ARIAL)
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_DEDUCTIBLE_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s","Deductible per Occurrence:")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+      Writefile(L_FILE_NAME,"%s","$")
+
+      If (BOPGENERAL:SIGNS_LIMIT > 0) Or (bpsdefault2:outdoor_SIGNS > 0) Then
+        {
+          If BOPGENERAL:SIGNS_DEDUCTIBLE[1] > bpsdefault2:outdoor_SIGNS_DEDUCTIBLE Then
+            {
+              Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+              Writefile(L_FILE_NAME,"%s","<033>&a")
+              Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+              Writefile(L_FILE_NAME,"%s","h+0V")
+              Writefile(L_FILE_NAME,"%s",Str(BOPGENERAL:SIGNS_DEDUCTIBLE[1],"ZZZ,ZZZ,ZZ9"))
+              Writefile(L_FILE_NAME,"%s","<NL>")
+            }
+          Else
+            {
+              Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+              Writefile(L_FILE_NAME,"%s","<033>&a")
+              Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+              Writefile(L_FILE_NAME,"%s","h+0V")
+              Writefile(L_FILE_NAME,"%s",Str(bpsdefault2:outdoor_SIGNS_DEDUCTIBLE,"ZZZ,ZZZ,ZZ9"))
+              Writefile(L_FILE_NAME,"%s","<NL>")
+            }
+        }  --end of if
+      Else  --write zero in for the deductable if limit = 0
+        {
+          Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+          Writefile(L_FILE_NAME,"%s","<033>&a")
+          Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+          Writefile(L_FILE_NAME,"%s","h+0V")
+          Writefile(L_FILE_NAME,"%s",Str(0,"ZZZ,ZZZ,ZZ9"))
+          Writefile(L_FILE_NAME,"%s","<NL>")
+        }
+/*    }
+  If L_SIGNS_NOT_ATTACHED = 1 Then
+    {
+      Writefile(L_FILE_NAME,"%s","<NL>")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s","Outdoor (Exterior) Signs (BU 25 18)")
+      Writefile(L_FILE_NAME,"%s","<NL>")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s","Not Attached to Building")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL)
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s","Basic Limit:")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+      Writefile(L_FILE_NAME,"%s","$")
+
+      L_EXTERIOR_SIGNS_LIMIT_NOT_ATTC = 0
+
+      L_REVISED_LIMIT    = BOPGENERAL:SIGNS_NOT_ATTACHED_LIMIT
+      L_BPSDEFAULT_LIMIT = bpsdefault2:SIGNS_LIMIT_NOT_ATTACHED
+      L_LIMIT            = L_EXTERIOR_SIGNS_LIMIT_NOT_ATTC
+      Do PRINT_LIMIT
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL)
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_DEDUCTIBLE_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s","Deductible per Occurrence:")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+      Writefile(L_FILE_NAME,"%s","$")
+
+      If (BOPGENERAL:SIGNS_NOT_ATTACHED_LIMIT > 0) Or
+         (bpsdefault2:SIGNS_LIMIT_NOT_ATTACHED > 0) Then
+        {
+          If BOPGENERAL:SIGNS_DEDUCTIBLE[2] > bpsdefault2:SIGNS_DEDUCTIBLE Then
+            {
+              Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+              Writefile(L_FILE_NAME,"%s","<033>&a")
+              Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+              Writefile(L_FILE_NAME,"%s","h+0V")
+              Writefile(L_FILE_NAME,"%s",Str(BOPGENERAL:SIGNS_DEDUCTIBLE[2],"ZZZ,ZZZ,ZZ9"))
+              Writefile(L_FILE_NAME,"%s","<NL>")
+            }
+          Else
+            {
+              Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+              Writefile(L_FILE_NAME,"%s","<033>&a")
+              Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+              Writefile(L_FILE_NAME,"%s","h+0V")
+              Writefile(L_FILE_NAME,"%s",Str(bpsdefault2:SIGNS_DEDUCTIBLE,"ZZZ,ZZZ,ZZ9"))
+              Writefile(L_FILE_NAME,"%s","<NL>")
+            }
+        }  --end of if to make sure signs not attached is greater then 0
+      Else
+        {
+          Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+          Writefile(L_FILE_NAME,"%s","<033>&a")
+          Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+          Writefile(L_FILE_NAME,"%s","h+0V")
+          Writefile(L_FILE_NAME,"%s",Str(0,"ZZZ,ZZZ,ZZ9"))
+          Writefile(L_FILE_NAME,"%s","<NL>")
+        }
+    }  --end of if L_SIGNS_NOT_ATTACHED = 1
+*/
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+40V")
+  Writefile(L_FILE_NAME,"%s","Pollution Clean-Up")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  L_LIMIT            = 0 --resets L_LIMIT
+  L_REVISED_LIMIT    = BOPGENERAL:POLLUTION_LIMIT
+  L_BPSDEFAULT_LIMIT = BPSDEFAULT2:POLLUTION_cleanup
+
+  Do PRINT_LIMIT
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_REVISED_POS-709)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Separate, Specific Deductible:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+--  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+40V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","Property Limitations")
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+  Writefile(L_FILE_NAME,"%s","<033>*c50h6v0P")
+  Writefile(L_FILE_NAME,"%s","<033>&a+75h+30V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","Household Personal Property")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_8)
+  Writefile(L_FILE_NAME,"%s","<033>&a-30V")
+  Writefile(L_FILE_NAME,"%s","(1)")
+  Writefile(L_FILE_NAME,"%s","<033>&a+30V")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a350h+0V")
+  Writefile(L_FILE_NAME,"%s","Campers and trailers (not used with watercraft)")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","      1,000")
+--  Writefile(L_FILE_NAME,"%s",Str(BPSDEFAULT2:FURS,"ZZZ,ZZZ,ZZ9"))
+  Writefile(L_FILE_NAME,"%s","<Nl>")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a350h+0V")
+  Writefile(L_FILE_NAME,"%s","Computers while off the described premises")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","      3,000")
+--  Writefile(L_FILE_NAME,"%s",Str(BPSDEFAULT2:FURS,"ZZZ,ZZZ,ZZ9"))
+  Writefile(L_FILE_NAME,"%s","<Nl>")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a350h+0V")
+  Writefile(L_FILE_NAME,"%s","Furs")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",Str(BPSDEFAULT2:FURS,"ZZZ,ZZZ,ZZ9"))
+  Writefile(L_FILE_NAME,"%s","<Nl>")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a350h+0V")
+  Writefile(L_FILE_NAME,"%s","Grave Markers")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","      1,000")
+--  Writefile(L_FILE_NAME,"%s",Str(BPSDEFAULT2:FURS,"ZZZ,ZZZ,ZZ9"))
+  Writefile(L_FILE_NAME,"%s","<Nl>")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a350h+0V")
+  Writefile(L_FILE_NAME,"%s","Guns and Accessories")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","      1,000")
+--  Writefile(L_FILE_NAME,"%s",Str(BPSDEFAULT2:FURS,"ZZZ,ZZZ,ZZ9"))
+  Writefile(L_FILE_NAME,"%s","<Nl>")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+
+  Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a350h+0V")
+  Writefile(L_FILE_NAME,"%s","Jewelry, watches, precious and semiprecious stones")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+120V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",Str(BPSDEFAULT2:JEWELRY,"ZZZ,ZZZ,ZZ9"))
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a350h+0V")
+  Writefile(L_FILE_NAME,"%s","Silverware")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","      1,000")
+--  Writefile(L_FILE_NAME,"%s",Str(BPSDEFAULT2:FURS,"ZZZ,ZZZ,ZZ9"))
+  Writefile(L_FILE_NAME,"%s","<Nl>")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a350h+0V")
+  Writefile(L_FILE_NAME,"%s","Watercraft and their equipment, motors,")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a350h+120V")
+  Writefile(L_FILE_NAME,"%s","parts and trailers")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","      1,000")
+--  Writefile(L_FILE_NAME,"%s",Str(BPSDEFAULT2:FURS,"ZZZ,ZZZ,ZZ9"))
+  Writefile(L_FILE_NAME,"%s","<Nl>")
+
+--  Writefile(L_FILE_NAME,"%s","<NL>")
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+40V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","Replacement Threshold ")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS+250)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",Str(BPSDEFAULT2:replacement_threshold,"ZZZ,ZZZ,ZZ9"))
+
+  Writefile(L_FILE_NAME,"%s","<NL>")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+40V")
+  Writefile(L_FILE_NAME,"%s","Trees, Shrubs, and Plants ")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_REVISED_POS-310)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Limit per Occurrence:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",Str(BPSDEFAULT2:TREES_limit,"ZZZ,ZZZ,ZZ9"))
+  Writefile(L_FILE_NAME,"%s","<Nl>")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_REVISED_POS-1060)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Limit on Any One Tree, Plant or Shrub:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",Str(BPSDEFAULT2:TREES_per,"ZZZ,ZZZ,ZZ9"))
+  Writefile(L_FILE_NAME,"%s","<Nl>")
+--  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+40V")
+  Writefile(L_FILE_NAME,"%s","Valuable Papers and Records")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_8)
+  Writefile(L_FILE_NAME,"%s","<033>&a-30V")
+  Writefile(L_FILE_NAME,"%s","(1)")
+  Writefile(L_FILE_NAME,"%s","<033>&a+30V")
+--  Writefile(L_FILE_NAME,"%n",L_VALUABLE_PAPERS_NO)
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+
+  L_VALUEABLE_PAPERS_LIMIT = BOPGENERAL:PROPERTY_LIMIT * (BPSDEFAULT2:VALUABLE_PERCENT Divide 100)
+
+  L_REVISED_LIMIT    = BOPGENERAL:VALUABLE_PAPERS_LIMIT
+  L_BPSDEFAULT_LIMIT = BPSDEFAULT2:VALUABLE_PAPERS
+  L_LIMIT            = L_VALUEABLE_PAPERS_LIMIT
+  Do PRINT_LIMIT   --valueable_papers
+
+--  If L_WATER_DAMAGE = 1 Then
+--    {
+--      Writefile(L_FILE_NAME,"%s","<Nl>")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+      Writefile(L_FILE_NAME,"%s","h+40V")
+      Writefile(L_FILE_NAME,"%s","Water Damage - Sewer / Drain Backup")
+      Writefile(L_FILE_NAME,"%s","<NL>")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL)
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_COVERGE_POS+150)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s","When BU 50 03 applies:")
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s","Basic Limit:")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+      Writefile(L_FILE_NAME,"%s","$")
+
+      L_WATER_BACKUP_LIMIT = BOPGENERAL:PROPERTY_LIMIT * (BPSDEFAULT2:SEWER_BKUP_PERCENT Divide 100)
+
+      L_REVISED_LIMIT    = BOPGENERAL:WATER_BACKUP_LIMIT
+      L_BPSDEFAULT_LIMIT = BPSDEFAULT2:WATER_damage
+      L_LIMIT            = L_WATER_BACKUP_LIMIT
+      Do PRINT_LIMIT
+--    }
+
+/*  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+  Writefile(L_FILE_NAME,"%s","Note: ")
+  Writefile(L_FILE_NAME,"%s",l_arial_bold_8)
+  Writefile(L_FILE_NAME,"%s","(1) ")
+  Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+  Writefile(L_FILE_NAME,"%s","Applies Only With Coverage B")
+
+  If sfpname:company_id one of "FARMERS" then
+    {
+      Writefile(L_FILE_NAME,"%s","<NL>")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+      Writefile(L_FILE_NAME,"%s","h+40V")
+      Writefile(L_FILE_NAME,"%s","Outdoor (Exterior) Building Glass")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL)
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_basic_POS-20)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s","Linear Feet")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+      Writefile(L_FILE_NAME,"%s","$")
+      Writefile(L_FILE_NAME,"%s",L_letter_gothic_bold_12)
+      Writefile(L_FILE_NAME,"%s",str(bopgeneral:glass_limit,"ZZZ,ZZZ,ZZ9"))
+
+      Writefile(L_FILE_NAME,"%s","<NL>")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL)
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_DEDUCTIBLE_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s","Deductible per Occurrence:")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+      Writefile(L_FILE_NAME,"%s","$")
+
+      If bopGENERAL:INCLUDE_GLASS_DEDUCTIBLE = "Y" then
+        {
+          Writefile(L_FILE_NAME,"%s",L_letter_gothic_bold_12)
+          Writefile(L_FILE_NAME,"%s","        200")
+        }
+  }
+*/
+--  Writefile(L_FILE_NAME,"%s","<NL>")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a1850h+40V")
+  Writefile(L_FILE_NAME,"%s","PART II")
+--  Writefile(L_FILE_NAME,"%s","<NL>")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+40V")
+  Writefile(L_FILE_NAME,"%s","Legal Liability For ")
+  Writefile(L_FILE_NAME,"%s",l_ARIAL_italic_bold)
+  Writefile(L_FILE_NAME,"%s","Customers' ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","Goods")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS+200)
+  Writefile(L_FILE_NAME,"%s","h+120V")
+  Writefile(L_FILE_NAME,"%s","Per ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_italic)
+  Writefile(L_FILE_NAME,"%s","Occurrence")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","     10,000")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_REVISED_POS)
+  Writefile(L_FILE_NAME,"%s","h+120V")
+  Writefile(L_FILE_NAME,"%s","Revised Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS+200)
+  Writefile(L_FILE_NAME,"%s","h+120V")
+  Writefile(L_FILE_NAME,"%s","Annual Aggregate")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","     25,000")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_REVISED_POS)
+  Writefile(L_FILE_NAME,"%s","h+120V")
+  Writefile(L_FILE_NAME,"%s","Revised Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+160V")
+  Writefile(L_FILE_NAME,"%s","Removal and Disposal Upon ")
+  Writefile(L_FILE_NAME,"%s",l_ARIAL_italic_bold)
+  Writefile(L_FILE_NAME,"%s","Lock Out ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","or Sale")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS+200)
+  Writefile(L_FILE_NAME,"%s","h+120V")
+  Writefile(L_FILE_NAME,"%s","Per ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_italic)
+  Writefile(L_FILE_NAME,"%s","Occurrence")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","     10,000")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_REVISED_POS)
+  Writefile(L_FILE_NAME,"%s","h+120V")
+  Writefile(L_FILE_NAME,"%s","Revised Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS+200)
+  Writefile(L_FILE_NAME,"%s","h+120V")
+  Writefile(L_FILE_NAME,"%s","Annual Aggregate")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","     25,000")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_REVISED_POS)
+  Writefile(L_FILE_NAME,"%s","h+120V")
+  Writefile(L_FILE_NAME,"%s","Revised Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+130V")
+  Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+  Writefile(L_FILE_NAME,"%s","Note: ")
+  Writefile(L_FILE_NAME,"%s",l_arial_bold_8)
+  Writefile(L_FILE_NAME,"%s","(1) ")
+  Writefile(L_FILE_NAME,"%s",l_arial_italic_9)
+  Writefile(L_FILE_NAME,"%s","Applies Only With Coverage B")
+
+  l_page_number = l_page_number + 1
+
+/*  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a420h7200V")
+  Writefile(L_FILE_NAME,"%s",l_copyright_6)
+  Writefile(L_FILE_NAME,"%s"," ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","2011 MSO, Inc.")
+*/
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a2800h7200V")
+  Writefile(L_FILE_NAME,"%s","- ")
+  Writefile(L_FILE_NAME,"%n",l_page_number)
+  Writefile(L_FILE_NAME,"%s"," -")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a5000h7200V")
+  Writefile(L_FILE_NAME,"%s","BU 04 31 10 11")
+  Writefile(L_FILE_NAME,"%s"," ")
+
+  Writefile(L_FILE_NAME,"%s","<FF>")
+
+                            --****Start of PAGE 3****
+
+  --border
+  If SCIPSCONTROL:PRINT_BORDERS_ON_DEC_PAGE = 1 Then
+    {
+      Writefile(L_FILE_NAME,"%s","<033>&a140h-220V<033>*c10a3100b0P")   --left vertical li
+      Writefile(L_FILE_NAME,"%s","<033>&a5585h-0V<033>*c10a3100b0P")   --right vertical
+      Writefile(L_FILE_NAME,"%s","<033>&a140h-0V<033>*c5467h20v0P") --top horizontal line to
+      Writefile(L_FILE_NAME,"%s","<033>&a140h7300V<033>*c5467h20v0P") --bottom horizontal line
+    }
+
+L_STATE            = BOPGENERAL:STATE
+L_COMPANY_ID       = sfpname:COMPANY_ID
+L_LINE_OF_BUSINESS = sfpname:LINE_OF_BUSINESS
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a180h0V")
+  Writefile(L_FILE_NAME,"%s","DECLARATIONS SUPPLEMENT")
+  Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+  Writefile(L_FILE_NAME,"%s","<033>*c50h6v0P")
+  Writefile(L_FILE_NAME,"%s","<033>&a+75h+30V")
+  Writefile(L_FILE_NAME,"%s","SELF STORAGE FACILITY")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a4700h0V")
+  Writefile(L_FILE_NAME,"%s","BU 04 31")
+  Writefile(L_FILE_NAME,"%s"," ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","10 11")
+--  Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+
+/*  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a4750h0V")
+  Writefile(L_FILE_NAME,"%s",Trun(SFPPRINT4:FORM_PRINT))
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s"," ")
+  Writefile(L_FILE_NAME,"%s",SFPPRINT4:EDITION_PRINT)*/
+
+  Writefile(L_FILE_NAME,"%s","<033>&a140h+40V<033>*c5467h5v0P")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a180h+0V")
+  Writefile(L_FILE_NAME,"%s","Policy No: ")
+
+  Writefile(L_FILE_NAME,"%s",Trun(SFSLINE:ALPHA))
+
+  Writefile(L_FILE_NAME,"%n",SFPPRINT1:POLICY_NO)
+  Writefile(L_FILE_NAME,"%s","<033>&a2250h+0V")
+  Writefile(L_FILE_NAME,"%s","Effective: ")
+  Writefile(L_FILE_NAME,"%d",SFPNAME:EFF_DATE)
+  Writefile(L_FILE_NAME,"%s","<NL>")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Supplemental - Continued")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a180h+120V")
+  Writefile(L_FILE_NAME,"%s","Location")
+  Writefile(L_FILE_NAME,"%s","<033>&a900h+0V")
+  Writefile(L_FILE_NAME,"%n",SFPLOCATION:PREM_NO)
+  Writefile(L_FILE_NAME,"%s","<033>&a1200h+0V")
+  Writefile(L_FILE_NAME,"%s","Building")
+  Writefile(L_FILE_NAME,"%s","<033>&a1900h+0V")
+  Writefile(L_FILE_NAME,"%n",SFPLOCATION:BUILD_NO)
+  Writefile(L_FILE_NAME,"%s","<NL>")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS+1000)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","The following limits apply only if limits for such are not shown in the Declarations.")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+180V")
+  Writefile(L_FILE_NAME,"%s","Fire and Explosion Liability")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","$")
+
+  L_REVISED_LIMIT    = BOPGENERAL:FIRE_LIMIT
+  L_BPSDEFAULT_LIMIT = BPSDEFAULT2:FIRE_explosion
+  L_LIMIT            = 0 --resets L_LIMIT
+  Do PRINT_LIMIT
+
+  Writefile(L_FILE_NAME,"%s","<NL>")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Personal Injury / Advertising Injury" )
+
+  Access SFPPRINT3,
+     Set SFPPRINT3:POLICY_NO    = SFPPRINT1:POLICY_NO,
+         SFPPRINT3:POL_YEAR     = SFPPRINT1:POL_YEAR,
+         SFPPRINT3:END_SEQUENCE = SFPPRINT1:END_SEQUENCE,
+         sfpprint3:prem_no      = sfplocation:prem_no,
+         sfpprint3:build_no     = sfplocation:build_no, Generic
+
+  --cheking for deletion of personal injury on part II
+  L_FMA100 = 0
+  L_BU0507 = 0
+
+  While SFPPRINT3:POLICY_NO    = SFPPRINT1:POLICY_NO And
+        SFPPRINT3:POL_YEAR     = SFPPRINT1:POL_YEAR And
+        SFPPRINT3:END_SEQUENCE = SFPPRINT1:END_SEQUENCE and
+        sfpprint3:prem_no      = sfplocation:prem_no and
+        sfpprint3:build_no     = sfplocation:build_no
+    {
+      If SFPPRINT3:CODE One Of "FMA100" Then
+        {
+          L_FMA100 = 1
+        }
+      If SFPPRINT3:CODE One Of "BU0507" Then
+        {
+          Access BOPOPERATIONS,
+             Set BOPOPERATIONS:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+                 BOPOPERATIONS:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+                 BOPOPERATIONS:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+          If (BOPOPERATIONS:EXCLUDE_PRODUCTS[2] = "Y") Then
+            {
+              L_BU0507 = 1  --only need to to see if personal liability is checkd on bu0507
+            }
+        }
+      Next SFPPRINT3
+    }
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_BASIC_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","Basic Limit:")
+
+  Writefile(L_FILE_NAME,"%s","<033>&f0S")--pop to return to basic limit
+
+  If L_FMA100 = 1 Then  --endorsement deletes coverage for personal injury
+    {
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+      Writefile(L_FILE_NAME,"%s","$")
+
+      Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s",Str(0,"ZZZ,ZZZ,ZZ9"))
+
+      If SCIPSCONTROL:PRINT_REVISED_ON_SUPP = 1 Then
+        {
+          Writefile(L_FILE_NAME,"%s","<NL>")
+          Writefile(L_FILE_NAME,"%s",L_ARIAL)
+          Writefile(L_FILE_NAME,"%s","<033>&a")
+          Writefile(L_FILE_NAME,"%n",L_REVISED_POS)
+          Writefile(L_FILE_NAME,"%s","h+0V")
+          Writefile(L_FILE_NAME,"%s","Revised Limit:")
+
+          Writefile(L_FILE_NAME,"%s","<033>&a")
+          Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+          Writefile(L_FILE_NAME,"%s","h+0V")
+          Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+          Writefile(L_FILE_NAME,"%s","$")
+
+          Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+          Writefile(L_FILE_NAME,"%s","<033>&a")
+          Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+          Writefile(L_FILE_NAME,"%s","h+0V")
+          Writefile(L_FILE_NAME,"%s",Str(0,"ZZZ,ZZZ,ZZ9"))
+
+        }
+    }
+  Else
+  If L_BU0507 = 1 Then
+    {
+      Writefile(L_FILE_NAME,"%s",L_ARIAL)
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s","Not Applicable")
+
+      If SCIPSCONTROL:PRINT_REVISED_ON_SUPP = 1 Then
+        {
+           Writefile(L_FILE_NAME,"%s","<NL>")
+           Writefile(L_FILE_NAME,"%s",L_ARIAL)
+           Writefile(L_FILE_NAME,"%s","<033>&a")
+           Writefile(L_FILE_NAME,"%n",L_REVISED_POS)
+           Writefile(L_FILE_NAME,"%s","h+0V")
+           Writefile(L_FILE_NAME,"%s","Revised Limit:")
+
+           Writefile(L_FILE_NAME,"%s","<033>&a")
+           Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+           Writefile(L_FILE_NAME,"%s","h+0V")
+           Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+           Writefile(L_FILE_NAME,"%s","$")
+
+           Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+           Writefile(L_FILE_NAME,"%s","<033>&a")
+           Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+           Writefile(L_FILE_NAME,"%s","h+0V")
+           Writefile(L_FILE_NAME,"%s",Str(0,"ZZZ,ZZZ,ZZ9"))
+        }
+   }
+ Else
+   {
+     Writefile(L_FILE_NAME,"%s","<033>&a")
+     Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+     Writefile(L_FILE_NAME,"%s","h+0V")
+     Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+     Writefile(L_FILE_NAME,"%s","$")
+
+     L_REVISED_LIMIT    = SFPMASTER:PERSONAL_ADD_INJURY
+     L_BPSDEFAULT_LIMIT = BPSDEFAULT2:PERSONAL_INJURY
+     L_LIMIT            = 0
+     Do PRINT_LIMIT
+
+   }
+
+  Writefile(L_FILE_NAME,"%s","<033>&f1S") --pushes current cursor onto stack
+
+  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS+700)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL)
+  Writefile(L_FILE_NAME,"%s","< Limit - All Locations")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+  If SCIPSCONTROL:PRINT_REVISED_ON_SUPP = 1 Then
+    {
+      Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+      Writefile(L_FILE_NAME,"%s","<033>&a")
+      Writefile(L_FILE_NAME,"%n",L_LIMIT_POS+700)
+      Writefile(L_FILE_NAME,"%s","h+0V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL)
+      Writefile(L_FILE_NAME,"%s","< Limit - All Locations")
+      Writefile(L_FILE_NAME,"%s","<NL>")
+    }
+
+  Writefile(L_FILE_NAME,"%s","<NL>")
+  Writefile(L_FILE_NAME,"%s",l_arial_bold)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","OTHER SPECIAL POLICY CONDITIONS")
+  Writefile(L_FILE_NAME,"%s","<NL>")
+
+/*--------------------------------------------------------------------------
+ The following code is for non-manditory endorsements
+ ---------------------------------------------------------------------------*/
+  Access SFPPRINT3,
+     Set SFPPRINT3:POLICY_NO    = SFPPRINT1:POLICY_NO,
+         SFPPRINT3:POL_YEAR     = SFPPRINT1:POL_YEAR,
+         SFPPRINT3:END_SEQUENCE = SFPPRINT1:END_SEQUENCE,
+         sfpprint3:prem_no      = sfplocation:prem_no,
+         sfpprint3:build_no     = sfplocation:build_no, Generic
+
+  While SFPPRINT3:POLICY_NO    = SFPPRINT1:POLICY_NO And
+        SFPPRINT3:POL_YEAR     = SFPPRINT1:POL_YEAR And
+        SFPPRINT3:END_SEQUENCE = SFPPRINT1:END_SEQUENCE and
+        sfpprint3:prem_no      = sfplocation:prem_no and
+        sfpprint3:build_no     = sfplocation:build_no
+    {
+      If L_LINE_PCOUNTER >= L_MAX_LINES - 6 Then
+        {
+          L_PAGE_NUMBER = L_PAGE_NUMBER +1
+          Writefile(L_FILE_NAME,"%s","<FF>")
+          Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+          Writefile(L_FILE_NAME,"%s","<033>&a5000h7250V")
+          Writefile(L_FILE_NAME,"%s","Page ")
+          Writefile(L_FILE_NAME,"%n",L_PAGE_NUMBER)
+          L_LINE_PCOUNTER = 1
+         --border
+          If SCIPSCONTROL:PRINT_BORDERS_ON_DEC_PAGE = 1 Then
+            {
+              Writefile(L_FILE_NAME,"%s","<033>&a140h0V<033>*c10a3045b0P")   --left vertical li
+              Writefile(L_FILE_NAME,"%s","<033>&a5585h0V<033>*c10a3045b0P")   --right vertical
+              Writefile(L_FILE_NAME,"%s","<033>&a140h0V<033>*c5467h20v0P") --top horizontal line to
+              Writefile(L_FILE_NAME,"%s","<033>&a140h7300V<033>*c5467h20v0P") --bottom horizontal line
+            }
+          Writefile(L_FILE_NAME,"%s","<033>&a+0h0V")
+          Writefile(L_FILE_NAME,"%s","<NL>") --sets starting point for newpage
+          Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+          Writefile(L_FILE_NAME,"%s","<033>&a1800h+0V")
+          Writefile(L_FILE_NAME,"%s","FORMS AND ENDORSEMENTS CONTINUED")
+          Writefile(L_FILE_NAME,"%s","<NL>")
+          L_LINE_PCOUNTER = L_LINE_PCOUNTER +1
+
+          Writefile(L_FILE_NAME,"%s","<033>&a150h-80V<033>*c5455h20v0P")
+          Writefile(L_FILE_NAME,"%s","<NL>")
+          Writefile(L_FILE_NAME,"%s","<033>&a+0h+20V")
+          L_LINE_PCOUNTER = L_LINE_PCOUNTER +1
+        }
+
+      If SFPPRINT3:PRINT_FORM = "Y" Then
+        {
+          Writefile(L_FILE_NAME,"%s",L_ARIAL)
+          Writefile(L_FILE_NAME,"%s","<033>&a1000h+0V")
+          Writefile(L_FILE_NAME,"%s",SFPPRINT3:FORM_EDITION)
+          Writefile(L_FILE_NAME,"%s","<033>&a2400h+0V")
+          Writefile(L_FILE_NAME,"%s",SFPPRINT3:DESCRIPTION)
+          Writefile(L_FILE_NAME,"%s","<NL>")
+          L_LINE_PCOUNTER = L_LINE_PCOUNTER + 1
+        }
+      Next SFPPRINT3
+    }
+  Writefile(L_FILE_NAME,"%s","<nl>")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+  Writefile(L_FILE_NAME,"%s","<033>&a")
+  Writefile(L_FILE_NAME,"%n",L_COVERGE_POS)
+  Writefile(L_FILE_NAME,"%s","h+0V")
+  Writefile(L_FILE_NAME,"%s","IMPORTANT MESSAGES")
+
+ Access SFSOPTEND,
+    Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+        SFSOPTEND:STATE            = L_STATE,
+        SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+        SFSOPTEND:CODE             = I_CODE, generic
+
+  While SFSOPTEND:COMPANY_ID       = L_COMPANY_ID and
+        SFSOPTEND:STATE            = L_STATE and
+        SFSOPTEND:LINE_OF_BUSINESS = l_LINE_OF_BUSINESS and
+        SFSOPTEND:CODE             = I_CODE
+    {
+      --start of sfsoptend check
+      If (sfpname:eff_date >= sfsoptend:eff_date and
+         (sfpname:eff_date < sfsoptend:exp_date or
+          sfsoptend:exp_date = 0)) then
+        {
+          l_eff_date = sfsoptend:eff_date
+        }
+      next sfsoptend
+    }
+
+  Access SFSOPTEND,
+     Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+         SFSOPTEND:STATE            = L_STATE,
+         SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+         SFSOPTEND:CODE             = I_CODE,
+         SFSOPTEND:EFF_DATE         = L_EFF_DATE, exact
+
+--  If sfsoptend:edition <> 0 then
+  If sfpname:line_of_business = 35 then
+    {
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a420h7080V")
+      Writefile(L_FILE_NAME,"%s","Ed. 1.0 ")
+--      Writefile(L_FILE_NAME,"%n",sfsoptend:edition)
+    }
+/*
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a420h7200V")
+  Writefile(L_FILE_NAME,"%s",l_copyright_6)
+  Writefile(L_FILE_NAME,"%s"," ")
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","2011 MSO, Inc.")
+*/
+  l_page_number = l_page_number + 1
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a2800h7200V")
+  Writefile(L_FILE_NAME,"%s","- ")
+  Writefile(L_FILE_NAME,"%n",l_page_number)
+  Writefile(L_FILE_NAME,"%s"," -")
+
+  Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+  Writefile(L_FILE_NAME,"%s","<033>&a5000h7200V")
+  Writefile(L_FILE_NAME,"%s","BU 04 31 10 11")
+  Writefile(L_FILE_NAME,"%s"," ")
+
+  Writefile(L_FILE_NAME,"%s","<FF>")
+
+
+--If L_PAGE_NUMBER = 3 Then
+--  {
+--    Writefile(L_FILE_NAME,"%s","<FF>")
+--  }
+       l_found = l_found + 1
+      }
+    Next SFPLOCATION
+  }
+
+Screen Exit
+Writefile(L_FILE_NAME,"%s%s",L_FORMFEED,L_RESET)
+Closefile(L_FILE_NAME)
+
+
+Procedure definition
+
+Procedure PRINT_LIMIT
+Begin
+  If SFSLINE:OPTION = "P" Then        -- means it is chatham square
+    {
+      If SCIPSCONTROL:PRINT_REVISED_ON_SUPP = 1 Then
+        {
+          If (L_LIMIT >= L_BPSDEFAULT_LIMIT) Or
+              L_LIMIT >= L_REVISED_LIMIT  Then
+            {
+              Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+              Writefile(L_FILE_NAME,"%s","<033>&a")
+              Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+              Writefile(L_FILE_NAME,"%s","h+0V")
+              Writefile(L_FILE_NAME,"%s",Str(L_LIMIT,"ZZZ,ZZZ,ZZ9"))
+            }  --l_limit is greater then both bpsdefault and revised
+          Else
+            {
+              If (L_BPSDEFAULT_LIMIT = L_REVISED_LIMIT) Then
+                {
+                  Writefile(L_FILE_NAME,"%s","<033>&a")
+                  Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+                  Writefile(L_FILE_NAME,"%s","h+0V")
+                  Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+                  Writefile(L_FILE_NAME,"%s",Str(L_BPSDEFAULT_LIMIT,"ZZZ,ZZZ,ZZ9"))
+                }
+              Else
+                If (L_BPSDEFAULT_LIMIT > L_REVISED_LIMIT) Then
+                  {
+                    Writefile(L_FILE_NAME,"%s","<033>&a")
+                    Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+                    Writefile(L_FILE_NAME,"%s","h+0V")
+                    Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+                    Writefile(L_FILE_NAME,"%s",Str(L_BPSDEFAULT_LIMIT,"ZZZ,ZZZ,ZZ9"))
+                  }
+            }
+          Writefile(L_FILE_NAME,"%s","<NL>")
+          Writefile(L_FILE_NAME,"%s",L_ARIAL)
+          Writefile(L_FILE_NAME,"%s","<033>&a")
+          Writefile(L_FILE_NAME,"%n",L_REVISED_POS)
+          Writefile(L_FILE_NAME,"%s","h+0V")
+          Writefile(L_FILE_NAME,"%s","Revised Limit:")
+          Writefile(L_FILE_NAME,"%s","<033>&a")
+          Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+          Writefile(L_FILE_NAME,"%s","h+0V")
+          Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+          Writefile(L_FILE_NAME,"%s","$")
+          Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+
+          If L_REVISED_LIMIT > L_BPSDEFAULT_LIMIT Then
+            {
+              Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+              Writefile(L_FILE_NAME,"%s","<033>&a")
+              Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+              Writefile(L_FILE_NAME,"%s","h+0V")
+              Writefile(L_FILE_NAME,"%s",Str(L_REVISED_LIMIT,"ZZZ,ZZZ,ZZ9"))
+           }
+           Writefile(L_FILE_NAME,"%s","<NL>")
+        } --end of print revised on supp
+      Else
+        {
+          If (L_LIMIT >= L_BPSDEFAULT_LIMIT) And
+             (L_LIMIT >= L_REVISED_LIMIT) Then
+            {
+              Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+              Writefile(L_FILE_NAME,"%s","<033>&a")
+              Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+              Writefile(L_FILE_NAME,"%s","h+0V")
+              Writefile(L_FILE_NAME,"%s",Str(L_LIMIT,"ZZZ,ZZZ,ZZ9")) --basic limit
+            }
+          Else
+            If (L_LIMIT < L_BPSDEFAULT_LIMIT) And       --default value is printed
+               (L_BPSDEFAULT_LIMIT >= L_REVISED_LIMIT) Then
+              {
+                Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+                Writefile(L_FILE_NAME,"%s","<033>&a")
+                Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+                Writefile(L_FILE_NAME,"%s","h+0V")
+                Writefile(L_FILE_NAME,"%s",Str(L_BPSDEFAULT_LIMIT,"ZZZ,ZZZ,ZZ9")) --basic limit
+              }
+            Else
+              {
+                Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+                Writefile(L_FILE_NAME,"%s","<033>&a")
+                Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+                Writefile(L_FILE_NAME,"%s","h+0V")
+                Writefile(L_FILE_NAME,"%s",Str(L_REVISED_LIMIT,"ZZZ,ZZZ,ZZ9"))  --revised limit
+              }
+            Writefile(L_FILE_NAME,"%s","<NL>") --moves "Applies only with coverage B" down two lines
+        }
+
+    }
+  Else  -- if not chatham square do below for limit
+    {
+      If SCIPSCONTROL:PRINT_REVISED_ON_SUPP = 1 Then
+        {
+--          If sfpname:company_id = "FARMERS" Then
+          If (L_BPSDEFAULT_LIMIT >= L_REVISED_LIMIT) then
+            {
+              Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+              Writefile(L_FILE_NAME,"%s","<033>&a")
+              Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+              Writefile(L_FILE_NAME,"%s","h+0V")
+              Writefile(L_FILE_NAME,"%s",Str(L_BPSDEFAULT_LIMIT,"ZZZ,ZZZ,ZZ9"))
+            }  --if l_bpsdefault_limit < l_revised_limit  do not print basic limit
+/*          else
+          If (L_BPSDEFAULT_LIMIT >= L_REVISED_LIMIT) then
+            {
+              Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+              Writefile(L_FILE_NAME,"%s","<033>&a")
+              Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+              Writefile(L_FILE_NAME,"%s","h+0V")
+              Writefile(L_FILE_NAME,"%s",Str(L_BPSDEFAULT_LIMIT,"ZZZ,ZZZ,ZZ9"))
+            }  --if l_bpsdefault_limit < l_revised_limit  do not print basic limit
+*/
+          Writefile(L_FILE_NAME,"%s","<NL>")
+          Writefile(L_FILE_NAME,"%s",L_ARIAL)
+          Writefile(L_FILE_NAME,"%s","<033>&a")
+          Writefile(L_FILE_NAME,"%n",L_REVISED_POS)
+
+          Writefile(L_FILE_NAME,"%s","h+0V")
+          Writefile(L_FILE_NAME,"%s","Revised Limit:")
+          Writefile(L_FILE_NAME,"%s","<033>&a")
+          Writefile(L_FILE_NAME,"%n",L_DOLLAR_POS)
+          Writefile(L_FILE_NAME,"%s","h+0V")
+          Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD)
+          Writefile(L_FILE_NAME,"%s","$")
+          Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+          If (L_BPSDEFAULT_LIMIT = L_REVISED_LIMIT) or
+              l_revised_limit = 0 Then
+            {
+              Writefile(L_FILE_NAME,"%s","<033>&a")
+              Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+              Writefile(L_FILE_NAME,"%s","h+0V")
+              Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+--              Writefile(L_FILE_NAME,"%s",Str(0,"ZZZ,ZZZ,ZZ9"))
+              Writefile(L_FILE_NAME,"%s","<NL>")
+            }
+          Else
+            {
+              Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+              Writefile(L_FILE_NAME,"%s","<033>&a")
+              Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+              Writefile(L_FILE_NAME,"%s","h+0V")
+              Writefile(L_FILE_NAME,"%s",Str(L_REVISED_LIMIT,"ZZZ,ZZZ,ZZ9"))
+              Writefile(L_FILE_NAME,"%s","<NL>")
+           }
+        }
+      Else --do not print the revised limit
+        {
+          If (L_BPSDEFAULT_LIMIT >= L_REVISED_LIMIT) Then
+            {
+              Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+              Writefile(L_FILE_NAME,"%s","<033>&a")
+              Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+              Writefile(L_FILE_NAME,"%s","h+0V")
+              Writefile(L_FILE_NAME,"%s",Str(L_BPSDEFAULT_LIMIT,"ZZZ,ZZZ,ZZ9"))
+              Writefile(L_FILE_NAME,"%s","<NL>")
+            }  --print l_bpsdefault_limit
+          Else --print l_revised_limit
+            {
+              Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_12)
+              Writefile(L_FILE_NAME,"%s","<033>&a")
+              Writefile(L_FILE_NAME,"%n",L_LIMIT_POS)
+              Writefile(L_FILE_NAME,"%s","h+0V")
+              Writefile(L_FILE_NAME,"%s",Str(L_REVISED_LIMIT,"ZZZ,ZZZ,ZZ9"))
+              Writefile(L_FILE_NAME,"%s","<NL>")
+            }
+        }
+    }
+End
+
+END

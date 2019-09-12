@@ -1,0 +1,328 @@
+%%
+/*
+Date Written: February 06, 2006
+
+Name: bu0507_012003.sd
+
+Copyright (c) 2000, SCIPS.com Inc.
+
+Modify
+Date                   By                  Comment
+--------------------------------------------------------------
+02/06/2006             DWR     New program name for new MSO Edition
+04/11/2006             DWR     Finalized changes from Salem
+===========================
+*/
+
+Program
+  Name = "bu0507_012003";
+  Type = "File";
+  Domain = "SFPPRINT1";
+  Padcharacter = Space;
+
+ String L_FILE_NAME[16] = "bu0507_012003.cq";
+ String L_COPY_NAME[20] ;
+ String L_SFPLOCATION_ZIP,
+        l_font ;
+
+ Unsigned ascii number l_max_lines;
+ Unsigned Ascii Number L_YEAR[4];
+ Unsigned Ascii number L_LINE_OF_BUSINESS[4];
+ Unsigned ascii number l_found[1];
+ Unsigned Ascii Number L_ITEM_COUNTER;
+ Unsigned Ascii Number L_STATE[2]=0;
+ Unsigned Ascii Number L_LOOP;
+ wdate L_EFF_DATE;
+ Unsigned Ascii Number L_LINE_COUNTER;
+ Unsigned Ascii Number L_PAGE_NUMBER;
+ Unsigned Ascii Number L_BU0507_COUNT=0;
+
+   Include "swsut100.var"
+   Include "swsut200.var"
+   Include "swsut300.var"
+   Include "csfonts.inc"
+   Include "line_spacing.var"
+
+Initialization
+  Deletefile (L_FILE_NAME);
+
+Update
+
+Access sfscompany,
+   Set sfscompany:company_id    = sfpname:company_id;
+
+Access SFPLOCATION,
+   Set SFPLOCATION:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPLOCATION:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPLOCATION:END_SEQUENCE = SFPPRINT1:END_SEQUENCE ,Generic
+
+Access SFPNAME,
+   Set SFPNAME:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPNAME:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPNAME:END_SEQUENCE = SFPPRINT1:END_SEQUENCE , Generic
+
+Access bopgeneral,
+   Set bopgeneral:POLICY_NO    = sfpprint1:POLICY_NO ,
+       bopgeneral:POL_YEAR     = sfpprint1:POL_YEAR ,
+       bopgeneral:END_SEQUENCE = sfpprint1:END_SEQUENCE, Generic
+
+Access BOPOPERATIONS,
+   Set BOPOPERATIONS:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       BOPOPERATIONS:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       BOPOPERATIONS:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access sfpend_alias,
+   Set sfpend_alias:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       sfpend_alias:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       sfpend_alias:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, generic
+
+Include "swsut100.inc"
+I_CODE = "BU0507"
+Include "swsut200.inc"
+Include "line_spacing.inc"
+
+While sfpend_alias:POLICY_NO    = SFPPRINT1:POLICY_NO And
+      sfpend_alias:POL_YEAR     = SFPPRINT1:POL_YEAR And
+      sfpend_alias:END_SEQUENCE = SFPPRINT1:END_SEQUENCE
+{
+  If sfpend_alias:CODE = I_CODE Then
+    {
+      L_STATE            = BOPGENERAL:STATE
+      L_COMPANY_ID       = sfpname:COMPANY_ID
+      L_LINE_OF_BUSINESS = sfpname:LINE_OF_BUSINESS
+
+      Access SFSOPTEND,
+          Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+              SFSOPTEND:STATE            = L_STATE,
+              SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+              SFSOPTEND:CODE             = I_CODE, generic
+
+      While SFSOPTEND:COMPANY_ID       = L_COMPANY_ID and
+            SFSOPTEND:STATE            = L_STATE and
+            SFSOPTEND:LINE_OF_BUSINESS = l_LINE_OF_BUSINESS and
+            SFSOPTEND:CODE             = I_CODE
+        {
+          If (sfpname:eff_date >= sfsoptend:eff_date and
+             (sfpname:eff_date < sfsoptend:exp_date or
+             sfsoptend:exp_date = 0)) then
+              {
+              l_eff_date = sfsoptend:eff_date
+              }
+
+          next sfsoptend
+        }
+
+      Access SFSOPTEND,
+         Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+             SFSOPTEND:STATE            = L_STATE,
+             SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+             SFSOPTEND:CODE             = I_CODE,
+             SFSOPTEND:EFF_DATE         = L_EFF_DATE, exact
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a420h7200V")
+      Writefile(L_FILE_NAME,"%s",l_copyright_6)
+      Writefile(L_FILE_NAME,"%s"," ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s",sfsoptend:COPYRIGHT)
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_12)
+      Writefile(L_FILE_NAME,"%s","<033>&a4300h120V")
+      Writefile(L_FILE_NAME,"%s",Trun(SFSOPTEND:FORM_PRINT))
+      Writefile(L_FILE_NAME,"%s"," ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s",SFSOPTEND:EDITION_PRINT)
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+
+      While BOPOPERATIONS:POLICY_NO    = SFPPRINT1:POLICY_NO And
+            BOPOPERATIONS:POL_YEAR     = SFPPRINT1:POL_YEAR And
+            BOPOPERATIONS:END_SEQUENCE = SFPPRINT1:END_SEQUENCE
+      {
+        If BOPOPERATIONS:EXCLUDE_PRODUCTS = "Y" Then
+          {
+            L_BU0507_COUNT = L_BU0507_COUNT + 1   --count the number of location that bu0507 was added too.
+          }
+
+        Next BOPOPERATIONS
+      }
+
+      Access BOPOPERATIONS,
+         Set BOPOPERATIONS:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+             BOPOPERATIONS:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+             BOPOPERATIONS:END_SEQUENCE = SFPPRINT1:END_SEQUENCE,
+             bopoperations:prem_no      = sfpend_alias:prem_no,
+             bopoperations:build_no     = sfpend_alias:build_no, generic
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+0V")
+      Writefile(L_FILE_NAME,"%s","OPERATIONS / COVERAGE EXCLUSION")
+      Writefile(L_FILE_NAME,"%s","<033>&a+30h+20V")
+      Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+      Writefile(L_FILE_NAME,"%s","<033>&a+30h-20V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","PART II")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+      Writefile(L_FILE_NAME,"%s","This endorsement excludes the operations / coverages as described. The required information may be shown below or elsewhere ")
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+      Writefile(L_FILE_NAME,"%s","in this policy.")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+140V")
+      Writefile(L_FILE_NAME,"%s","The provisions of this endorsement apply only when the endorsement number is listed in the Declarations.")
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+      Writefile(L_FILE_NAME,"%s","Except as provided below, all other provisions in this policy are unchanged.")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+100V")
+      Writefile(L_FILE_NAME,"%s","<033>&a200h-60V<033>*c5200h5v0P")--Horizontal line
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+240V")
+      Writefile(L_FILE_NAME,"%s","Policy # ")
+      Writefile(L_FILE_NAME,"%n",sfpprint1:policy_no)
+      Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+240V")
+      Writefile(L_FILE_NAME,"%s","SCHEDULE")
+
+      if sfscompany:company_id one of "DELOS", "GGUND" then
+        {
+          Access bopgeneral,
+             Set bopgeneral:POLICY_NO    = sfpend_alias:POLICY_NO ,
+                 bopgeneral:POL_YEAR     = sfpend_alias:POL_YEAR ,
+                 bopgeneral:END_SEQUENCE = sfpend_alias:END_SEQUENCE,
+                 bopgeneral:prem_no      = sfpend_alias:prem_no,
+                 bopgeneral:build_no     = sfpend_alias:build_no, Generic
+
+            Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+            Writefile(L_FILE_NAME,"%s","<033>&a200h+140V")
+            Writefile(L_FILE_NAME,"%s","Location #: ")
+            Writefile(L_FILE_NAME,"%n",bopgeneral:prem_no)
+            Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+            Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+            Writefile(L_FILE_NAME,"%s","Building #: ")
+            Writefile(L_FILE_NAME,"%n",bopgeneral:build_no)
+          }
+
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a900h+240V")
+        Writefile(L_FILE_NAME,"%s","Operations / Coverage Excluded")
+        Writefile(L_FILE_NAME,"%s","<033>&a+30h+20V")
+        Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+        Writefile(L_FILE_NAME,"%s","<033>&a+30h-20V")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","List location if not applicable to all locations. ")
+
+        Writefile(L_FILE_NAME,"%s","<033>&a900h+120V")
+        Writefile(L_FILE_NAME,"%s","1.")
+        Writefile(L_FILE_NAME,"%s","<033>&a1100h+0V")
+        Writefile(L_FILE_NAME,"%s",L_WINGDINGS)
+        Writefile(L_FILE_NAME,"%s","o")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a1300h+0V")
+        Writefile(L_FILE_NAME,"%s","If checked, Part II does not include any liability included within the ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+        Writefile(L_FILE_NAME,"%s","products / completed")
+        Writefile(L_FILE_NAME,"%s","<033>&a1300h+120V")
+        Writefile(L_FILE_NAME,"%s","operations hazard. ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","Location No: ")
+
+        If BOPOPERATIONS:EXCLUDE_PRODUCTS = "Y" Then
+            {
+            Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+            Writefile(L_FILE_NAME,"%s","<033>&a1118h-134V")
+            Writefile(L_FILE_NAME,"%s","x")
+            Writefile(L_FILE_NAME,"%s","<033>&a+0h+134V")
+            Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+            Writefile(L_FILE_NAME,"%s","<033>&a2650h+0V")
+            Writefile(L_FILE_NAME,"%n",BOPOPERATIONS:PREM_NO)
+            }
+
+        Writefile(L_FILE_NAME,"%s","<NL>")
+        Writefile(L_FILE_NAME,"%s","<NL>")
+        If BOPOPERATIONS:EXCLUDE_ADJ_INJURY = "Y" Then
+          {
+            Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+            Writefile(L_FILE_NAME,"%s","<033>&a1118h-14V")
+            Writefile(L_FILE_NAME,"%s","x")
+            Writefile(L_FILE_NAME,"%s","<033>&a+0h+14V")
+          }
+
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a900h+0V")
+        Writefile(L_FILE_NAME,"%s","2.")
+        Writefile(L_FILE_NAME,"%s","<033>&a1100h+0V")
+        Writefile(L_FILE_NAME,"%s",L_WINGDINGS)
+        Writefile(L_FILE_NAME,"%s","o")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a1300h+0V")
+        Writefile(L_FILE_NAME,"%s","If checked, The ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+        Writefile(L_FILE_NAME,"%s","Personal Injury / Advertising Injury ")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","Supplemental Coverage in Part II does ")
+        Writefile(L_FILE_NAME,"%s","<033>&a1300h+120V")
+        Writefile(L_FILE_NAME,"%s","not apply.")
+        Writefile(L_FILE_NAME,"%s","<NL>")
+        Writefile(L_FILE_NAME,"%s","<NL>")
+
+        If BOPOPERATIONS:EXCLUDE_OTHER[1] <> "" Then
+          {
+            Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+            Writefile(L_FILE_NAME,"%s","<033>&a900h+0V")
+            Writefile(L_FILE_NAME,"%s","3.")
+            Writefile(L_FILE_NAME,"%s","<033>&a1300h+0V")
+            Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+            Writefile(L_FILE_NAME,"%s","Other:")
+            Writefile(L_FILE_NAME,"%s","<033>&a1100h+0V")
+            Writefile(L_FILE_NAME,"%s",L_WINGDINGS)
+            Writefile(L_FILE_NAME,"%s","o")
+
+            Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+            Writefile(L_FILE_NAME,"%s","<033>&a1118h-14V")
+            Writefile(L_FILE_NAME,"%s","x")
+            Writefile(L_FILE_NAME,"%s","<033>&a+450h+14V")
+            Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+
+            For L_LOOP = 1 to 3
+             {
+               If bopoperations:exclude_other[l_loop] <> "" Then
+               {
+                 L_FONT             = l_arial_bold_9
+                 L_V_POSITION       = " +0"
+                 L_H_POSITION       = "1568"     -- "90"
+                 L_CHARACTER_STRING = bopoperations:exclude_other[l_loop]
+                 L_MAX_CHAR         = 40
+                 l_max_lines         = 60
+                 include "line_spacing.inc"
+                l_line_counter = l_line_counter + 1
+               }
+              }
+          }
+        Else
+          {
+            Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+            Writefile(L_FILE_NAME,"%s","<033>&a900h+0V")
+            Writefile(L_FILE_NAME,"%s","3.")
+            Writefile(L_FILE_NAME,"%s","<033>&a1300h+0V")
+            Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+            Writefile(L_FILE_NAME,"%s","Other:")
+            Writefile(L_FILE_NAME,"%s","<033>&a1100h+0V")
+            Writefile(L_FILE_NAME,"%s",L_WINGDINGS)
+            Writefile(L_FILE_NAME,"%s","o")
+            Writefile(L_FILE_NAME,"%s","<NL>")
+          }
+
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a200h+240V")
+        Writefile(L_FILE_NAME,"%s","COVERAGE MODIFICATION")
+        Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+        Writefile(L_FILE_NAME,"%s","<033>&a900h+240V")
+        Writefile(L_FILE_NAME,"%s","PART II does not apply to the operations or coverages described in the Schedule, including any ")
+        Writefile(L_FILE_NAME,"%s","<033>&a900h+120V")
+        Writefile(L_FILE_NAME,"%s","premises used in connection with the described operations. ")
+        Writefile(L_FILE_NAME,"%s","<FF>")
+    }
+  Next sfpend_alias
+}
+Screen Exit
+Writefile(L_FILE_NAME,"%s%s",L_FORMFEED ,L_RESET )
+Closefile(L_FILE_NAME)
+End

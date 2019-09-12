@@ -1,0 +1,254 @@
+%%
+/*
+Date Written: May 14, 2002
+
+Name: bu0251_092007.sd
+
+Copyright (c) 2000, SCIPS.com Inc.
+
+Modify
+Date                   By                  Comment
+--------------------------------------------------------------
+12/26/2002             RMG          Fixed Errors
+===========================
+*/
+
+Program
+  Name = "bu0251_092007";
+  Type = "File";
+  Domain = "SFPPRINT1";
+  Padcharacter = Space;
+
+String L_FILE_NAME[16] = "bu0251_092007.cq";
+String L_COPY_NAME[20] ;
+Unsigned ascii number l_max_lines=60;
+Unsigned Ascii Number L_YEAR[4];
+Unsigned Ascii number L_LINE_OF_BUSINESS[4];
+Unsigned ascii number l_found[1];
+Unsigned Ascii Number L_ITEM_COUNTER;
+Unsigned Ascii Number L_STATE[2]=0;
+Unsigned Ascii Number L_LOOP;
+wdate L_EFF_DATE;
+Unsigned Ascii Number L_LINE_COUNTER;
+Unsigned Ascii Number L_PAGE_NUMBER;
+
+   Include "swsut100.var"
+   Include "swsut200.var"
+   Include "swsut300.var"
+   Include "csfonts.inc"
+
+Initialization
+  Deletefile (L_FILE_NAME);
+
+Update
+
+Access BOPGENERAL,
+   Set BOPGENERAL:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       BOPGENERAL:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       BOPGENERAL:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, generic
+
+Access SFPNAME,
+   Set SFPNAME:POLICY_NO    = SFPPRINT1:POLICY_NO,
+       SFPNAME:POL_YEAR     = SFPPRINT1:POL_YEAR,
+       SFPNAME:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access SFPLOCATION,
+   Set SFPLOCATION:POLICY_NO    = SFPPRINT1:POLICY_NO,
+       SFPLOCATION:POL_YEAR     = SFPPRINT1:POL_YEAR,
+       SFPLOCATION:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access sfpend_alias,
+   Set sfpend_alias:POLICY_NO    = SFPPRINT1:POLICY_NO,
+       sfpend_alias:POL_YEAR     = SFPPRINT1:POL_YEAR,
+       sfpend_alias:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Include "swsut100.inc"
+I_CODE = "BU0251"
+Include "swsut200.inc"
+Include "swsut300.inc"
+
+While  sfpend_alias:POLICY_NO    = SFPPRINT1:POLICY_NO And
+       sfpend_alias:POL_YEAR     = SFPPRINT1:POL_YEAR And
+       sfpend_alias:END_SEQUENCE = SFPPRINT1:END_SEQUENCE
+{
+  If sfpend_alias:CODE = I_CODE Then
+    {
+      l_state            = bopgeneral:state
+      L_COMPANY_ID       = sfpname:COMPANY_ID
+      L_LINE_OF_BUSINESS = sfpname:LINE_OF_BUSINESS
+
+      Access SFSOPTEND,
+         Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+             SFSOPTEND:STATE            = L_STATE,
+             SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+             SFSOPTEND:CODE             = I_CODE, generic
+
+       While SFSOPTEND:COMPANY_ID       = L_COMPANY_ID and
+             SFSOPTEND:STATE            = L_STATE and
+             SFSOPTEND:LINE_OF_BUSINESS = l_LINE_OF_BUSINESS and
+             SFSOPTEND:CODE             = I_CODE
+
+         {  --start of sfsoptend check
+           If (sfpname:eff_date >= sfsoptend:eff_date and
+              (sfpname:eff_date < sfsoptend:exp_date or
+               sfsoptend:exp_date = 0)) then
+             {
+               l_eff_date = sfsoptend:eff_date
+             }
+           next sfsoptend
+         }
+
+      Access SFSOPTEND,
+         Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+             SFSOPTEND:STATE            = L_STATE,
+             SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+             SFSOPTEND:CODE             = I_CODE,
+             SFSOPTEND:EFF_DATE         = L_EFF_DATE, exact
+
+      If sfsoptend:edition <> 0 then
+        {
+          Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+          Writefile(L_FILE_NAME,"%s","<033>&a420h7080V")
+          Writefile(L_FILE_NAME,"%s","Ed. ")
+          Writefile(L_FILE_NAME,"%n",sfsoptend:edition)
+        }
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a420h7200V")
+      Writefile(L_FILE_NAME,"%s",l_copyright_6)
+      Writefile(L_FILE_NAME,"%s"," ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s",sfsoptend:COPYRIGHT)
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_12)
+      Writefile(L_FILE_NAME,"%s","<033>&a4300h120V")
+      Writefile(L_FILE_NAME,"%s",Trun(SFSOPTEND:FORM_PRINT))
+      Writefile(L_FILE_NAME,"%s"," ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s",SFSOPTEND:EDITION_PRINT)
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+
+        Access BOPGENERAL,
+           Set BOPGENERAL:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+               BOPGENERAL:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+               BOPGENERAL:END_SEQUENCE = SFPPRINT1:END_SEQUENCE,
+               BOPGENERAL:PREM_NO      = sfpend_alias:PREM_NO,
+               BOPGENERAL:BUILD_NO     = sfpend_alias:BUILD_NO, Generic
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+0V")
+      Writefile(L_FILE_NAME,"%s","WINDSTORM AND RELATED DAMAGE DEDUCTIBLE ")
+      Writefile(L_FILE_NAME,"%s","<033>&a+0h+20V")
+      Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+      Writefile(L_FILE_NAME,"%s","<033>&a+0h-20V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s"," PART I")
+      Writefile(L_FILE_NAME,"%s","<NL>")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+0V")
+      Writefile(L_FILE_NAME,"%s","This endorsement provides a special deductible for ")
+      Writefile(L_FILE_NAME,"%s","windstorm and related losses.  The required information may be shown below or ")
+      Writefile(L_FILE_NAME,"%s","<NL>")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_ITALIC_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+0V")
+      Writefile(L_FILE_NAME,"%s","elsewhere in this policy.")
+      Writefile(L_FILE_NAME,"%s","<NL>")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+0V")
+      Writefile(L_FILE_NAME,"%s","The provisions of this endorsement apply only when the endorsement is listed in the Declarations.")
+      Writefile(L_FILE_NAME,"%s","<NL>")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+0V")
+      Writefile(L_FILE_NAME,"%s","Except as provided below, all other provisions in this policy ")
+      Writefile(L_FILE_NAME,"%s","are unchanged.")
+      Writefile(L_FILE_NAME,"%s","<NL>")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h-60V<033>*c5400h8v0P")
+      Writefile(L_FILE_NAME,"%s","<NL>")
+      Writefile(L_FILE_NAME,"%s","<NL>")           --Horizontal line
+
+      Writefile(L_FILE_NAME,"%s",l_arial_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+0V")
+      Writefile(L_FILE_NAME,"%s","Policy # ")
+      Writefile(L_FILE_NAME,"%n",sfpprint1:policy_no)
+
+      Access SFPLOCATION,
+         Set SFPLOCATION:POLICY_NO    = SFPPRINT1:POLICY_NO,
+             SFPLOCATION:POL_YEAR     = SFPPRINT1:POL_YEAR,
+             SFPLOCATION:END_SEQUENCE = SFPPRINT1:END_SEQUENCE,
+             sfplocation:prem_no      = bopgeneral:prem_no,
+             sfplocation:build_no     = bopgeneral:build_no, generic
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+      Writefile(L_FILE_NAME,"%s","Loc. No.:")
+      Writefile(L_FILE_NAME,"%s"," ")
+      Writefile(L_FILE_NAME,"%n",sfplocation:prem_no)
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+120V")
+      Writefile(L_FILE_NAME,"%s","Bldg. No.:")
+      Writefile(L_FILE_NAME,"%s"," ")
+      Writefile(L_FILE_NAME,"%n",sfplocation:build_no)
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+160V")
+      Writefile(L_FILE_NAME,"%s","$")
+      Writefile(L_FILE_NAME,"%s",L_LETTER_GOTHIC_BOLD_10)
+      Writefile(L_FILE_NAME,"%s",Str(BOPGENERAL:WIND_DEDUCTIBLE,"ZZ,ZZZ"))
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a1120h+0V")
+      Writefile(L_FILE_NAME,"%s","< Windstorm Deductible Amount")
+      Writefile(L_FILE_NAME,"%s","<NL>")
+      Writefile(L_FILE_NAME,"%s","<NL>")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+1000V")
+      Writefile(L_FILE_NAME,"%s","COVERAGE MODIFICATION")
+      Writefile(L_FILE_NAME,"%s","<NL>")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+0V")
+      Writefile(L_FILE_NAME,"%s",l_arial_9)
+      Writefile(L_FILE_NAME,"%s","The deductible provision ")
+      Writefile(L_FILE_NAME,"%s","of the Part I G ")
+      Writefile(L_FILE_NAME,"%s","<033>&a+0h+20V")
+      Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+      Writefile(L_FILE_NAME,"%s","<033>&a+0h-20V")
+      Writefile(L_FILE_NAME,"%s",l_arial_9)
+      Writefile(L_FILE_NAME,"%s"," How Losses Are Settled ")
+      Writefile(L_FILE_NAME,"%s","Condition is amended as follows:")
+      Writefile(L_FILE_NAME,"%s","<NL>")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+30V")
+      Writefile(L_FILE_NAME,"%s","The deductible amount ")
+      Writefile(L_FILE_NAME,"%s","shown for Windstorm replaces the otherwise applicable ")
+      Writefile(L_FILE_NAME,"%s","Part I deductible for all loss in any one occurrence caused ")
+      Writefile(L_FILE_NAME,"%s","<NL>")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+0V")
+      Writefile(L_FILE_NAME,"%s","by windstorm.  This includes any ")
+      Writefile(L_FILE_NAME,"%s","related loss to (1) the interior of a building or structure or (2) personal property within a building or")
+      Writefile(L_FILE_NAME,"%s","<NL>")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+0V")
+      Writefile(L_FILE_NAME,"%s","structure: damaged by hail, ice, rain, ")
+      Writefile(L_FILE_NAME,"%s","sleet, snow or water as a result of an exterior roof ")
+      Writefile(L_FILE_NAME,"%s","or wall sustaining loss by")
+      Writefile(L_FILE_NAME,"%s"," windstorm allowing such ")
+      Writefile(L_FILE_NAME,"%s","<NL>")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a90h+0V")
+      Writefile(L_FILE_NAME,"%s","elements to enter the building or structure.")
+      Writefile(L_FILE_NAME,"%s","<NL>")
+      Writefile(L_FILE_NAME,"%s","<FF>")
+    }
+  Next sfpend_alias
+}
+Screen Exit
+Writefile(L_FILE_NAME,"%s%s",L_FORMFEED ,L_RESET )
+Closefile(L_FILE_NAME)
+End

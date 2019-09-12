@@ -1,0 +1,292 @@
+%%
+/*
+Date Written: March 16, 2009
+
+Name: bu0350_092007
+
+Copyright (c) 2000, SCIPS.com Inc.
+
+Modify
+Date                   By                  Comment
+--------------------------------------------------------------
+03/16/2009            JLB              New BOP form
+===========================
+*/
+
+Program
+  Name = "bu0350_092007";
+  Type = "File";
+  Domain = "SFPPRINT1";
+  Padcharacter = Space;
+
+ String L_FILE_NAME[16] = "bu0350_092007.cq";
+ String L_COMPANY_ID[10] ,
+        l_bopaddin_zip,
+        l_font[35];
+ Unsigned ascii number L_PAGE_COUNTER,
+                       l_loop,
+                       L_ITEM_COUNTER;
+ Unsigned Ascii Number L_LINE_COUNTER;
+ Unsigned Ascii Number L_PAGE_NUMBER = 1;
+ Unsigned Ascii Number L_MAX_LINES=35;
+ Unsigned Ascii number L_LINE_OF_BUSINESS[4];
+ Unsigned Ascii Number L_STATE[2]=0;
+ wdate L_EFF_DATE;
+
+   Include "csfonts.inc"
+   Include "swsut100.var"
+   Include "swsut200.var"
+ --Include "swsut300.var"
+   Include "line_spacing.var"
+
+Initialization
+  Deletefile (L_FILE_NAME);
+
+Update
+
+Access SFPNAME,
+   Set SFPNAME:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPNAME:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPNAME:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access SFPLOCATION,
+   Set SFPLOCATION:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPLOCATION:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPLOCATION:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access sfpend_alias,
+   Set sfpend_alias:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       sfpend_alias:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       sfpend_alias:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access bopaddin,
+   Set bopaddin:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       bopaddin:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       bopaddin:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access bopgeneral,
+   Set bopgeneral:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       bopgeneral:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       bopgeneral:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access SFSCOMPANY,
+   Set SFSCOMPANY:COMPANY_ID = SFPNAME:COMPANY_ID, Exact
+
+   Include "swsut103.inc"
+   I_CODE = "BU0350"
+   Include "swsut200.inc"
+ --Include "swsut300.var"i
+
+l_page_counter = 1
+
+While bopaddin:POLICY_NO    = sfpprint1:POLICY_NO  and
+      bopaddin:POL_YEAR     = sfpprint1:POL_YEAR  and
+      bopaddin:END_SEQUENCE = sfpprint1:END_SEQUENCE
+{
+  If bopaddin:code = I_CODE then
+    {
+      L_STATE            = BOPGENERAL:STATE
+      L_COMPANY_ID       = sfpname:COMPANY_ID
+      L_LINE_OF_BUSINESS = sfpname:line_of_business
+
+      Access SFSOPTEND,
+         Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+             SFSOPTEND:STATE            = L_STATE,
+             SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+             SFSOPTEND:CODE             = I_CODE, generic
+
+       While SFSOPTEND:COMPANY_ID       = L_COMPANY_ID and
+             SFSOPTEND:STATE            = L_STATE and
+             SFSOPTEND:LINE_OF_BUSINESS = l_LINE_OF_BUSINESS and
+             SFSOPTEND:CODE             = I_CODE
+
+         {  --start of sfsoptend check
+           If (sfpname:eff_date >= sfsoptend:eff_date and
+              (sfpname:eff_date < sfsoptend:exp_date or
+               sfsoptend:exp_date = 0)) then
+             {
+               l_eff_date = sfsoptend:eff_date
+             }
+           next sfsoptend
+         }
+
+      Access SFSOPTEND,
+         Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+             SFSOPTEND:STATE            = L_STATE,
+             SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+             SFSOPTEND:CODE             = I_CODE,
+             SFSOPTEND:EFF_DATE         = L_EFF_DATE, exact
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a420h7200V")
+      Writefile(L_FILE_NAME,"%s",l_copyright_6)
+      Writefile(L_FILE_NAME,"%s"," ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s",sfsoptend:COPYRIGHT)
+      Writefile(L_FILE_NAME,"%s","<033>&a100h+120V")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_12)
+      Writefile(L_FILE_NAME,"%s","<033>&a4780h120V")
+      Writefile(L_FILE_NAME,"%s",Trun(SFSOPTEND:FORM_PRINT))
+      Writefile(L_FILE_NAME,"%s"," ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s",SFSOPTEND:EDITION_PRINT)
+
+      Writefile(L_FILE_NAME,"%s","<033>&a100h+120V")
+      Writefile(L_FILE_NAME,"%s","ADDITIONAL ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","INSUREDS")
+      Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+      Writefile(L_FILE_NAME,"%s","<033>*c75h8v0P")
+      Writefile(L_FILE_NAME,"%s","<033>&a+105h+30V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","SUPPLEMENTAL DECLARATIONS")
+      Writefile(L_FILE_NAME,"%s","<033>&a+30h+14V")
+      Writefile(L_FILE_NAME,"%s",L_BULLET_6)
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a+30h-14V")
+      Writefile(L_FILE_NAME,"%s","PART I")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_Italic_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a100h+120V")
+      Writefile(L_FILE_NAME,"%s","This endorsement is used with one or more of the additional insured endorsements to list the designated addtional insureds.")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a100h+130V")
+      Writefile(L_FILE_NAME,"%s","The provisions of this endorsement apply only when the endorsement number is listed in the Declarations.")
+      Writefile(L_FILE_NAME,"%s","<033>&a100h+120V")
+      Writefile(L_FILE_NAME,"%s","Except as provided below, all other provisions in this policy are unchanged.")
+      Writefile(L_FILE_NAME,"%s","<033>&a100h+20V")
+      Writefile(L_FILE_NAME,"%s","<033>*c5400h8v0p") --Horizontal line
+
+      Writefile(L_FILE_NAME,"%s","<033>&a100h+200V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","Policy # ")
+      Writefile(L_FILE_NAME,"%n",SFPPRINT1:POLICY_NO)
+
+      Writefile(L_FILE_NAME,"%s","<033>&a100h+180V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","SCHEDULE")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+560V")
+      Writefile(L_FILE_NAME,"%s","Applicable")
+      Writefile(L_FILE_NAME,"%s",L_push)
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a100h+120V")
+      Writefile(L_FILE_NAME,"%s","Endorsements")
+
+      do print_forms
+
+      Writefile(L_FILE_NAME,"%s",L_pop)
+      Writefile(L_FILE_NAME,"%s",L_push)
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a1800h+120V")
+      Writefile(L_FILE_NAME,"%s","Designated ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_italic_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","Insureds")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a3800h+0V")
+      Writefile(L_FILE_NAME,"%s","Additional Information")
+
+      Writefile(L_FILE_NAME,"%s",L_pop)
+      do print_name_address_description
+
+      Writefile(L_FILE_NAME,"%s","<FF>")
+    }
+  next bopaddin
+}
+Screen Exit
+Writefile(L_FILE_NAME,"%s%s",L_FORMFEED ,L_RESET )
+Closefile(L_FILE_NAME)
+
+
+Procedure definition
+
+Procedure print_forms
+begin
+Access sfpend_alias,
+   Set sfpend_alias:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       sfpend_alias:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       sfpend_alias:END_SEQUENCE = SFPPRINT1:END_SEQUENCE,
+       sfpend_alias:prem_no      = bopgeneral:prem_no,
+       sfpend_alias:build_no     = bopgeneral:build_no,
+       sfpend_alias:sub_code     = bopgeneral:sub_code, Generic
+
+ While sfpend_alias:POLICY_NO    = sfpprint1:POLICY_NO  and
+       sfpend_alias:POL_YEAR     = sfpprint1:POL_YEAR  and
+       sfpend_alias:END_SEQUENCE = sfpprint1:END_SEQUENCE and
+       sfpend_alias:prem_no      = bopgeneral:prem_no and
+       sfpend_alias:build_no     = bopgeneral:build_no
+ {
+   If sfpend_alias:code one of  "BU0302" , "BU0303", "BU0316", "BU0601", "BU0602", "BU0603",
+                                 "BU0604", "BU0605", "BU0606", "BU0607", "BU0608", "BU0609",
+                                 "BU0616" then
+     {
+       Writefile(L_FILE_NAME,"%s","<033>&a100h+120V")
+       Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+       Writefile(L_FILE_NAME,"%s",sfpend_alias:code)
+     }
+    next sfpend_alias
+ }
+end
+
+Procedure print_name_address_description
+begin
+  If bopaddin:code = I_CODE then
+    {
+      L_BOPADDIN_ZIP = If (Val(BOPADDIN:STR_ZIPCODE[6,9]) = 0) Then
+                              BOPADDIN:STR_ZIPCODE[1,5]
+                      Else
+                              BOPADDIN:STR_ZIPCODE[1,5] + "-" +
+                              BOPADDIN:STR_ZIPCODE[6,9]
+
+      Writefile(L_FILE_NAME,"%s",L_push)
+      Writefile(L_FILE_NAME,"%s","<033>&a1800h+120V")
+      For l_loop = 1 to 3
+        {
+          If bopaddin:name[l_loop] <> "" then
+            {
+              Writefile(L_FILE_NAME,"%s","<033>&a1800h+120V")
+              Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+              Writefile(L_FILE_NAME,"%s",bopaddin:name[l_loop])
+            }
+        }
+
+      For l_loop = 1 to 3
+        {
+          If bopaddin:address[l_loop] <> "" then
+            {
+              Writefile(L_FILE_NAME,"%s","<033>&a1800h+120V")
+              Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+              Writefile(L_FILE_NAME,"%s",bopaddin:address[l_loop])
+            }
+        }
+
+      Writefile(L_FILE_NAME,"%s","<033>&a1800h+120V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s",trun(bopaddin:city))
+      Writefile(L_FILE_NAME,"%s",", ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s",bopaddin:str_state)
+      Writefile(L_FILE_NAME,"%s"," ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s",l_bopaddin_zip)
+
+      Writefile(L_FILE_NAME,"%s",L_pop)
+      Writefile(L_FILE_NAME,"%s","<033>&a1800h+120V")
+         If bopaddin:description <> "" then
+           {
+             L_max_lines        = 60
+             L_FONT             = l_arial_9
+             L_V_POSITION       = "+120"
+             L_H_POSITION       = "3800"
+             L_CHARACTER_STRING = BOPADDIN:DESCRIPTION
+             L_MAX_CHAR         = 55
+             include "line_spacing.inc"
+           }
+       }
+End
+
+
+End

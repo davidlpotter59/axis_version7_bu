@@ -1,0 +1,231 @@
+%%
+/*
+Date Written: April 28, 2009
+
+Name: bu1526_101997.sd
+
+Copyright (c) 2000, SCIPS.com Inc.
+
+Modify
+Date                   By                  Comment
+--------------------------------------------------------------
+04/28/2009            JLB             New form bu1526_101997
+===========================
+*/
+
+Program
+  Name = "bu1526_101997";
+  Type = "File";
+  Domain = "SFPPRINT1";
+  Padcharacter = Space;
+
+ String L_FILE_NAME[16] = "bu1526_101997.cq";
+ String l_company_id;
+ String L_COPY_NAME[20] ;
+ Unsigned ascii number l_max_lines=60;
+ Unsigned Ascii Number L_YEAR[4];
+ Unsigned Ascii number L_LINE_OF_BUSINESS[4];
+ Unsigned ascii number l_found[1];
+ Unsigned Ascii Number L_ITEM_COUNTER;
+ Unsigned Ascii Number L_STATE[2]=0;
+ Unsigned Ascii Number L_LOOP;
+ wdate L_EFF_DATE;
+ Unsigned Ascii Number L_LINE_COUNTER;
+ Unsigned Ascii Number L_PAGE_NUMBER;
+ Unsigned ascii number L_PAGE_COUNTER;
+
+   Include "csfonts.inc"
+   Include "swsut100.var"
+   Include "swsut200.var"
+ --Include "swsut300.var"
+
+Initialization
+  Deletefile (L_FILE_NAME);
+
+Update
+
+Access SFPNAME,
+   Set SFPNAME:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPNAME:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPNAME:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access SFPLOCATION,
+   Set SFPLOCATION:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       SFPLOCATION:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       SFPLOCATION:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+Access bopgeneral,
+   Set bopgeneral:POLICY_NO     = SFPPRINT1:POLICY_NO,
+       bopgeneral:POL_YEAR      = SFPPRINT1:POL_YEAR,
+       bopgeneral:END_SEQUENCE  = SFPPRINT1:END_SEQUENCE, Generic
+
+Access bopendorse,
+   Set bopendorse:POLICY_NO     = SFPPRINT1:POLICY_NO,
+       bopendorse:POL_YEAR      = SFPPRINT1:POL_YEAR,
+       bopendorse:END_SEQUENCE  = SFPPRINT1:END_SEQUENCE, Generic
+
+Access sfpend_alias,
+   Set sfpend_alias:POLICY_NO    = SFPPRINT1:POLICY_NO ,
+       sfpend_alias:POL_YEAR     = SFPPRINT1:POL_YEAR ,
+       sfpend_alias:END_SEQUENCE = SFPPRINT1:END_SEQUENCE, Generic
+
+   Include "swsut100.inc"
+   I_CODE = "BU1526"
+   Include "swsut200.inc"
+
+l_page_counter = 1
+
+While sfpend_alias:POLICY_NO    = SFPPRINT1:POLICY_NO And
+      sfpend_alias:POL_YEAR     = SFPPRINT1:POL_YEAR And
+      sfpend_alias:END_SEQUENCE = SFPPRINT1:END_SEQUENCE
+{
+  If sfpend_alias:CODE = I_CODE Then
+    {
+      l_state            = bopgeneral:state
+      L_COMPANY_ID       = sfpname:COMPANY_ID
+      L_LINE_OF_BUSINESS = 0005
+
+      Access SFSOPTEND,
+         Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+             SFSOPTEND:STATE            = L_STATE,
+             SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+             SFSOPTEND:CODE             = I_CODE, generic
+
+       While SFSOPTEND:COMPANY_ID       = L_COMPANY_ID and
+             SFSOPTEND:STATE            = L_STATE and
+             SFSOPTEND:LINE_OF_BUSINESS = l_LINE_OF_BUSINESS and
+             SFSOPTEND:CODE             = I_CODE
+
+         {  --start of sfsoptend check
+           If (sfpname:eff_date >= sfsoptend:eff_date and
+              (sfpname:eff_date < sfsoptend:exp_date or
+               sfsoptend:exp_date = 0)) then
+             {
+               l_eff_date = sfsoptend:eff_date
+             }
+           next sfsoptend
+         }
+
+      Access SFSOPTEND,
+         Set SFSOPTEND:COMPANY_ID       = L_COMPANY_ID,
+             SFSOPTEND:STATE            = L_STATE,
+             SFSOPTEND:LINE_OF_BUSINESS = L_LINE_OF_BUSINESS,
+             SFSOPTEND:CODE             = I_CODE,
+             SFSOPTEND:EFF_DATE         = L_EFF_DATE, exact
+
+      If sfsoptend:edition <> 0 then
+        {
+          Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+          Writefile(L_FILE_NAME,"%s","<033>&a420h7080V")
+          Writefile(L_FILE_NAME,"%s","Ed. ")
+          Writefile(L_FILE_NAME,"%n",sfsoptend:edition)
+        }
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","<033>&a420h7200V")
+      Writefile(L_FILE_NAME,"%s",l_copyright_6)
+      Writefile(L_FILE_NAME,"%s"," ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s",sfsoptend:COPYRIGHT)
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_12)
+      Writefile(L_FILE_NAME,"%s","<033>&a4300h120V")
+      Writefile(L_FILE_NAME,"%s",Trun(SFSOPTEND:FORM_PRINT))
+      Writefile(L_FILE_NAME,"%s"," ")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_BOLD_9)
+      Writefile(L_FILE_NAME,"%s",SFSOPTEND:EDITION_PRINT)
+
+      Access bopendorse,
+         Set bopendorse:POLICY_NO     = SFPPRINT1:POLICY_NO,
+             bopendorse:POL_YEAR      = SFPPRINT1:POL_YEAR,
+             bopendorse:END_SEQUENCE  = SFPPRINT1:END_SEQUENCE,
+             bopendorse:PREM_NO       = sfpend_alias:PREM_NO,
+             bopendorse:BUILD_NO      = sfpend_alias:BUILD_NO,
+             bopendorse:CODE          = I_CODE, Generic
+
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+180V")
+      Writefile(L_FILE_NAME,"%s","<033>*c5200h8v0p") --Horizontal line
+      Writefile(L_FILE_NAME,"%s",l_arial_bold_12)
+      Writefile(L_FILE_NAME,"%s","<033>&a800h+140V")
+      Writefile(L_FILE_NAME,"%s","EMPLOYEE BENEFITS LIABILITY ")
+      Writefile(L_FILE_NAME,"%s","<033>&a+30h-30V")
+      Writefile(L_FILE_NAME,"%s","<033>*c105h8v0P")
+      Writefile(L_FILE_NAME,"%s","<033>&a+135h+30V")
+      Writefile(L_FILE_NAME,"%s",l_arial_bold_12)
+      Writefile(L_FILE_NAME,"%s"," SUPPLEMENTAL DECLARATIONS")
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+40V")
+      Writefile(L_FILE_NAME,"%s","<033>*c5200h8v0p") --Horizontal line
+
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+150V")
+      Writefile(L_FILE_NAME,"%s",l_arial_bold_9)
+      Writefile(L_FILE_NAME,"%s","The following special limits and information apply to the designated coverage, in accordance with the provisions of the")
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+120V")
+      Writefile(L_FILE_NAME,"%s","Employee Benefits Liability Coverage Form (BU 15 25).")
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+40V")
+      Writefile(L_FILE_NAME,"%s","<033>*c5200h8v0p") --Horizontal line
+
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+150V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","Policy # ")
+      Writefile(L_FILE_NAME,"%n",sfpprint1:policy_no)
+
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+150V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+      Writefile(L_FILE_NAME,"%s","SCHEDULE")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+180V")
+      Writefile(L_FILE_NAME,"%s","Limits of Liability")
+      Writefile(L_FILE_NAME,"%s","<033>&a2000h+0V")
+      Writefile(L_FILE_NAME,"%s","Premium Basis")
+      Writefile(L_FILE_NAME,"%s","<033>&a3500h+0V")
+      Writefile(L_FILE_NAME,"%s","Estimated Advance Premium")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+150V")
+      Writefile(L_FILE_NAME,"%s","Each Claim $")
+      Writefile(L_FILE_NAME,"%s",L_letter_gothic_bold_10)
+      Writefile(L_FILE_NAME,"%s",str(bopendorse:limit[1],"ZZZ,ZZZ,ZZZ"))
+      Writefile(L_FILE_NAME,"%s","<033>&a2000h+0V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+      Writefile(L_FILE_NAME,"%s","No. Of")
+      Writefile(L_FILE_NAME,"%s","<033>&a3500h+0V")
+      Writefile(L_FILE_NAME,"%s","$")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a2000h+120V")
+      Writefile(L_FILE_NAME,"%s","Employees  ")
+      Writefile(L_FILE_NAME,"%s",L_letter_gothic_bold_10)
+      Writefile(L_FILE_NAME,"%n",bopendorse:no_employees)
+
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+520V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+      Writefile(L_FILE_NAME,"%s","Aggregate $")
+      Writefile(L_FILE_NAME,"%s",L_letter_gothic_bold_10)
+      Writefile(L_FILE_NAME,"%s",str(bopendorse:limit[2],"ZZZ,ZZZ,ZZZ"))
+
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+720V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+      Writefile(L_FILE_NAME,"%s","Each claim subject to Deductible of $")
+      Writefile(L_FILE_NAME,"%s",L_letter_gothic_bold_10)
+      Writefile(L_FILE_NAME,"%s",str(bopendorse:deductible[1],"ZZZ,ZZZ,ZZZ"))
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+      Writefile(L_FILE_NAME,"%s"," *")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+150V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_9)
+      Writefile(L_FILE_NAME,"%s","* If no entry is shown, $1,000 deductible applies.")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a200h+720V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_bold_9)
+      Writefile(L_FILE_NAME,"%s","RETROACTIVE DATE:")
+
+      Writefile(L_FILE_NAME,"%s","<033>&a3500h7200V")
+      Writefile(L_FILE_NAME,"%s",L_ARIAL_bold)
+      Writefile(L_FILE_NAME,"%s","LEBANON VALLEY INSURANCE COMPANY")
+      Writefile(L_FILE_NAME,"%s","<FF>")
+      }
+    Next sfpend_alias
+  }
+Screen Exit
+Writefile(L_FILE_NAME,"%s%s",L_FORMFEED ,L_RESET )
+Closefile(L_FILE_NAME)
+End
